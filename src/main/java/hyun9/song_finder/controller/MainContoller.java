@@ -1,11 +1,13 @@
 package hyun9.song_finder.controller;
 
 import hyun9.song_finder.dto.FollowedArtistDto;
+import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 
 import java.util.List;
 
+@Controller
 public class MainContoller {
 
     @GetMapping("/")
