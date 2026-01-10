@@ -2,6 +2,7 @@ package hyun9.song_finder.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 
@@ -15,7 +16,7 @@ public class SecurityConfig {
                         .requestMatchers("/", "/css/**", "/images/**").permitAll()
                         .anyRequest().authenticated()
                 )
-                .oauth2Login();  // Google OAuth2 로그인 활성화
+                .oauth2Login(Customizer.withDefaults());  // Google OAuth2 로그인 활성화
 
         return http.build();
     }
