@@ -18,6 +18,6 @@ public class MainContoller {
         model.addAttribute("followedArtists", followed);
         return "main";
     }
-    //exp
+    //expdwa
 
 }
