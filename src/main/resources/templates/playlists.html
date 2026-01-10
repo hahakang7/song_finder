@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Playlists</title></head>
+<body>
+<h1>내 재생목록 목록</h1>
+<ul>
+    <li th:each="p : ${playlists}">
+        <span th:text="${p.snippet.title}">제목</span>
+    </li>
+</ul>
+</body>
+</html>
