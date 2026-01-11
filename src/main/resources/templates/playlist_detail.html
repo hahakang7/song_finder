@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Playlist Detail</title>
+</head>
+<body>
+<h2>플레이리스트 상세</h2>
+
+<ul>
+    <li th:each="item : ${playlistItems}">
+        <span th:text="${item.snippet.title}"></span>
+    </li>
+</ul>
+
+<div>
+    <a th:if="${prevPageToken}" th:href="@{/playlist/{id}(id=${id}, pageToken=${prevPageToken})}">이전</a>
+    <a th:if="${nextPageToken}" th:href="@{/playlist/{id}(id=${id}, pageToken=${nextPageToken})}">다음</a>
+    <a href="/playlists">
+        전체 재생목록으로 돌아가기
+    </a>
+</div>
+
+</body>
+</html>
