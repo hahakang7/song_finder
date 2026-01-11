@@ -4,9 +4,16 @@
 <body>
 <h1>내 재생목록 목록</h1>
 <ul>
-    <li th:each="p : ${playlists}">
-        <span th:text="${p.snippet.title}">제목</span>
+    <li th:each="pl : ${playlists}">
+        <a th:href="@{/playlist/{id}(id=${pl.id})}" th:text="${pl.snippet.title}"></a>
     </li>
 </ul>
+
+<div>
+    <a th:if="${prevPageToken}" th:href="@{/playlists(page=__prevPage__)}">이전</a>
+    <a th:if="${nextPageToken}" th:href="@{/playlists(page=__nextPage__)}">다음</a>
+</div>
+
+
 </body>
 </html>
