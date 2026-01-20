@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>채널 확인</title>
+</head>
+<body>
+
+<h2>채널 확인</h2>
+
+<div th:if="${channel}">
+    <p><b>채널명:</b> <span th:text="${channel.snippet.title}"></span></p>
+    <img th:src="${channel.snippet.thumbnails.default.url}" alt="thumb">
+</div>
+
+<hr>
+
+<h2>비교할 내 플레이리스트 선택</h2>
+
+<form th:action="@{/compare}" method="post">
+    <input type="hidden" name="channelId" th:value="${channelId}">
+    <select name="playlistId" required>
+        <option value="" disabled selected>플레이리스트 선택</option>
+        <option th:each="pl : ${playlists}"
+                th:value="${pl.id}"
+                th:text="${pl.snippet.title}">
+        </option>
+    </select>
+    <button type="submit">비교하기</button>
+</form>
+
+<p th:if="${error}" th:text="${error}" style="color:red;"></p>
+
+<p><a href="/artist/link">채널 다시 입력</a></p>
+<p><a href="/playlists">내 플레이리스트 목록 보기</a></p>
+
+</body>
+</html>

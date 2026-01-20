@@ -95,7 +95,7 @@ public class PlaylistController {
         model.addAttribute("nextPageToken", result.get("nextPageToken"));
         model.addAttribute("prevPageToken", result.get("prevPageToken"));
 
-        return "playlist_detail";
+        return "playlist-detail";
     }
 
     public List<Map<String, Object>> fetchPlaylistItems(String accessToken, String playlistId) {
