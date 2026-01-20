@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><title>비교 결과</title></head>
+<body>
+
+<h2>비교 결과</h2>
+<p>플레이리스트에 없는 항목 수: <b th:text="${missingCount}">0</b></p>
+
+<ul>
+    <li th:each="v : ${missingVideos}">
+        <img th:src="${v.snippet.thumbnails.default.url}" alt="thumb"/>
+        <span th:text="${v.snippet.title}">title</span>
+    </li>
+</ul>
+
+<a href="/playlists">전체 재생목록으로 돌아가기</a>
+
+</body>
+</html>
