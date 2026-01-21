@@ -9,7 +9,7 @@
 <ul>
     <li th:each="v : ${missingVideos}">
         <img th:src="${v.snippet.thumbnails.default.url}" alt="thumb"/>
-        <span th:text="${v.snippet.title}">title</span>
+        <span th:text="${v.snippet.normalizedTitle}"></span>
     </li>
 </ul>
 
