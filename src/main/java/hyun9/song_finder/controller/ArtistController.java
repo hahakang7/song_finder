@@ -8,7 +8,6 @@ import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -21,88 +20,97 @@ public class ArtistController {
     private final YoutubeService youtubeService;
     private final OAuth2AuthorizedClientService clientService;
 
-    //검색기능은 추후 개발 잠정폐지
-    /*
-
-    // 1단계: 검색폼 렌더링
-    @GetMapping("/artist")
-    public String showArtistSearchPage() {
-        return "artist-search";
-    }
-
-
-
-    @GetMapping("/artist/search")
-    public String handleArtistSearch(@RequestParam("artistName") String artistName, Model model) {
-        List<Map<String, Object>> channels = youtubeService.searchChannelsByArtist(artistName);
-
-        model.addAttribute("artistName", artistName);
-        model.addAttribute("channels", channels);
-
-        return "artis-result";
-    }
-     */
-
 
     @PostMapping("/compare")
-    public String compareChannelWithPlaylist(@AuthenticationPrincipal OAuth2User principal,
-                                             @RequestParam("channelId") String channelId,
-                                             @RequestParam("playlistId") String playlistId,
-                                             Model model) {
+    public String compareChannelWithPlaylist(
+            @AuthenticationPrincipal OAuth2User principal,
+            @RequestParam("channelId") String channelId,
+            @RequestParam("playlistId") String playlistId,
+            Model model
+    ) {
 
         // 0) access token
         OAuth2AuthorizedClient client =
                 clientService.loadAuthorizedClient("google", principal.getName());
         String accessToken = client.getAccessToken().getTokenValue();
 
-        // 1) 채널의 uploads playlistId 얻기
+        // 1) 채널 uploads playlistId
         String uploadsPlaylistId = youtubeService.getUploadsPlaylistId(channelId);
         if (uploadsPlaylistId == null) {
             model.addAttribute("error", "채널의 업로드 재생목록을 찾지 못했습니다.");
             return "error";
         }
 
-        // 2) uploads playlist에서 videoId 전부 수집 (페이지네이션 포함)
-        Set<String> rawArtistVideoIds =
+        // 2) 아티스트 uploads videoId 수집
+        Set<String> artistVideoIds =
                 youtubeService.getAllVideoIdsInPlaylist(accessToken, uploadsPlaylistId);
 
-        // uploads가 비었으면 바로 종료
-        if (rawArtistVideoIds.isEmpty()) {
+        if (artistVideoIds.isEmpty()) {
             model.addAttribute("missingVideos", List.of());
             model.addAttribute("missingCount", 0);
             model.addAttribute("note", "채널 업로드 목록에서 영상이 발견되지 않았습니다.");
             return "compare-result";
         }
 
-        // 3) videos.list로 (snippet + contentDetails) 가져오기 (배치 50개씩)
-        List<String> rawList = new ArrayList<>(rawArtistVideoIds);
+        // 3) 아티스트 영상 상세 조회
         List<Map<String, Object>> artistVideosDetailed =
-                youtubeService.getVideosByIdsWithDetails(accessToken, rawList);
+                youtubeService.getVideosByIdsWithDetails(
+                        accessToken, new ArrayList<>(artistVideoIds));
 
-        // 4) 정제: 곡 후보만 남기기 (shorts/잡영상 제거)
+        // 4) 곡 후보만 필터링
         List<Map<String, Object>> artistSongsDetailed =
                 youtubeService.filterLikelySongs(artistVideosDetailed);
 
-        // 5) 정제된 곡 후보들의 videoId set 만들기
-        Set<String> artistSongIds = new HashSet<>();
-        for (Map<String, Object> v : artistSongsDetailed) {
-            String vid = (String) v.get("id");
-            if (vid != null) artistSongIds.add(vid);
-        }
-
-        // 6) 사용자가 선택한 플레이리스트의 videoId 전부 수집 (페이지네이션 포함)
-        Set<String> userPlaylistVideoIds =
+        // 5) 플레이리스트 videoId 수집
+        Set<String> playlistVideoIds =
                 youtubeService.getAllVideoIdsInPlaylist(accessToken, playlistId);
 
-        // 7) 차집합: (아티스트 곡 후보) - (사용자 플레이리스트)
-        Set<String> missingIds = new HashSet<>(artistSongIds);
-        missingIds.removeAll(userPlaylistVideoIds);
+        List<Map<String, Object>> playlistVideosDetailed =
+                youtubeService.getVideosByIdsWithDetails(
+                        accessToken, new ArrayList<>(playlistVideoIds));
 
-        // 8) missing 상세는 이미 artistSongsDetailed에 있으니 거기서 골라내기 (추가 API 호출 없음)
+        // 6) 플레이리스트 정제된 곡 제목 Set
+        Set<String> playlistSongTitles = new HashSet<>();
+
+        for (Map<String, Object> v : playlistVideosDetailed) {
+            Map<String, Object> snippet = (Map<String, Object>) v.get("snippet");
+            if (snippet == null) continue;
+
+            String rawTitle = (String) snippet.get("title");
+            String channelTitle = (String) snippet.get("channelTitle");
+
+            String normalized =
+                    youtubeService.normalizeSongTitle(rawTitle, channelTitle);
+
+            if (!normalized.isEmpty()) {
+                playlistSongTitles.add(normalized);
+            }
+        }
+
+        // 7) 아티스트 곡 vs 플레이리스트 비교
         List<Map<String, Object>> missingVideos = new ArrayList<>();
+
         for (Map<String, Object> v : artistSongsDetailed) {
-            String vid = (String) v.get("id");
-            if (vid != null && missingIds.contains(vid)) {
+            Map<String, Object> snippet = (Map<String, Object>) v.get("snippet");
+            if (snippet == null) continue;
+
+            String rawTitle = (String) snippet.get("title");
+            String channelTitle = (String) snippet.get("channelTitle");
+
+            String normalizedArtistTitle =
+                    youtubeService.normalizeSongTitle(rawTitle, channelTitle);
+
+            boolean contained = false;
+            for (String plTitle : playlistSongTitles) {
+                if (normalizedArtistTitle.contains(plTitle)) {
+                    contained = true;
+                    break;
+                }
+            }
+
+            if (!contained) {
+                // 화면 표시용
+                snippet.put("normalizedTitle", normalizedArtistTitle);
                 missingVideos.add(v);
             }
         }
@@ -110,12 +118,13 @@ public class ArtistController {
         model.addAttribute("missingVideos", missingVideos);
         model.addAttribute("missingCount", missingVideos.size());
 
-        // (선택) 디버그용: 정제 전/후 개수 비교
-        model.addAttribute("rawCount", rawArtistVideoIds.size());
+        // 디버그 정보
+        model.addAttribute("rawCount", artistVideoIds.size());
         model.addAttribute("filteredCount", artistSongsDetailed.size());
 
         return "compare-result";
     }
+
 
 
 

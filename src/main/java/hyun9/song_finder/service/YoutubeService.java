@@ -383,6 +383,101 @@ public class YoutubeService {
     }
 
 
+    //곡 제목을 정제하는 함수
+    public String normalizeSongTitle(String rawTitle, String artistName) {
+        if (rawTitle == null) return "";
+
+        String t = rawTitle.toLowerCase();
+
+        // 1. 괄호 제거
+        t = t.replaceAll("\\(.*?\\)", "");
+        t = t.replaceAll("\\[.*?\\]", "");
+
+        // 2. 고정 키워드 제거
+        String[] removeKeywords = {
+                "official", "mv", "m/v", "music video",
+                "audio", "ver.", "version", "live"
+        };
+        for (String k : removeKeywords) {
+            t = t.replace(k, "");
+        }
+
+        // 3. 아티스트명 제거
+        if (artistName != null) {
+            String a = Pattern.quote(artistName.toLowerCase());
+
+            // 앞: "artist - title"
+            t = t.replaceAll("^\\s*" + a + "\\s*[-|:/：]\\s*", "");
+
+            // 뒤: "title - artist"
+            t = t.replaceAll("\\s*[-|:/：]\\s*" + a + "\\s*$", "");
+        }
+
+
+        // 4. 특수문자 제거
+        t = t.replaceAll("[^\\p{L}\\p{N} ]", " ");
+
+        // 5. 공백 정리
+        t = t.replaceAll("\\s+", " ").trim();
+
+        // 안전장치
+        if (artistName != null && !t.isBlank()) {
+            String a = artistName.toLowerCase();
+
+            List<String> tokens = new ArrayList<>(Arrays.asList(t.split(" ")));
+
+            // 뒤에서부터 가수명 토큰 제거
+            while (!tokens.isEmpty() && tokens.get(tokens.size() - 1).equals(a)) {
+                tokens.remove(tokens.size() - 1);
+            }
+
+            t = String.join(" ", tokens).trim();
+        }
+
+
+
+        return t;
+    }
+
+    // 내 플레이리스트 곡 제목 Set 만들기
+    public Set<String> extractPlaylistSongTitles(
+            List<Map<String, Object>> playlistVideos,
+            String artistName) {
+
+        Set<String> titles = new HashSet<>();
+
+        for (Map<String, Object> v : playlistVideos) {
+            Map<String, Object> snippet = (Map<String, Object>) v.get("snippet");
+            if (snippet == null) continue;
+
+            String rawTitle = (String) snippet.get("title");
+            String normalized = normalizeSongTitle(rawTitle, artistName);
+
+            if (!normalized.isEmpty()) {
+                titles.add(normalized);
+            }
+        }
+        return titles;
+    }
+
+
+    // 아티스트 곡이 플레이리스트에 포함됐는지 판정
+    public boolean isContainedInPlaylist(
+            String artistSongTitle,
+            Set<String> playlistTitles) {
+
+        for (String plTitle : playlistTitles) {
+            // 🔥 핵심 규칙
+            if (artistSongTitle.contains(plTitle)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+
+
+
 
 
 }
