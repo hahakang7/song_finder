@@ -3,7 +3,6 @@ package hyun9.song_finder.domain;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
-import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
