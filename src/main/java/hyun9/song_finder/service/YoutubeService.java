@@ -476,6 +476,143 @@ public class YoutubeService {
     }
 
 
+    public Optional<String> findTopicChannelId(String artistName) {
+        if (artistName == null || artistName.isBlank()) {
+            return Optional.empty();
+        }
+
+        String query = artistName + " - Topic";
+
+        String url = "https://www.googleapis.com/youtube/v3/search"
+                + "?part=snippet"
+                + "&type=channel"
+                + "&maxResults=5"
+                + "&q=" + URLEncoder.encode(query, StandardCharsets.UTF_8)
+                + "&key=" + API_KEY;
+
+        RestTemplate restTemplate = new RestTemplate();
+        ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> items =
+                (List<Map<String, Object>>) response.getBody().get("items");
+
+        if (items == null || items.isEmpty()) {
+            return Optional.empty();
+        }
+
+        String artistLower = artistName.toLowerCase();
+
+        for (Map<String, Object> item : items) {
+            Map<String, Object> snippet = (Map<String, Object>) item.get("snippet");
+            Map<String, Object> idObj   = (Map<String, Object>) item.get("id");
+            if (snippet == null || idObj == null) continue;
+
+            String channelId = (String) idObj.get("channelId");
+            String title = ((String) snippet.get("title")).toLowerCase();
+            String desc  = ((String) snippet.getOrDefault("description", "")).toLowerCase();
+
+            boolean titleLooksLikeTopic =
+                    title.contains(artistLower)
+                            && (
+                            title.contains("topic")
+                                    || title.contains("주제")
+                                    || title.contains("トピック")
+                    );
+
+            boolean descLooksLikeTopic =
+                    desc.contains("auto-generated");
+
+            if (titleLooksLikeTopic || descLooksLikeTopic) {
+                return Optional.of(channelId);
+            }
+        }
+
+        return Optional.empty();
+    }
+
+
+    public List<Map<String, Object>> loadSongsFromTopicChannel(
+            String artistName,
+            String accessToken
+    ) {
+        Optional<String> topicChannelIdOpt = findTopicChannelId(artistName);
+
+        if (topicChannelIdOpt.isEmpty()) {
+            return List.of();
+        }
+
+        String topicChannelId = topicChannelIdOpt.get();
+
+        // 1) Topic 채널 uploads playlistId
+        String uploadsPlaylistId = getUploadsPlaylistId(topicChannelId);
+        if (uploadsPlaylistId == null) {
+            return List.of();
+        }
+
+        // 2) uploads playlist에서 videoId 전부 수집
+        Set<String> videoIds =
+                getAllVideoIdsInPlaylist(accessToken, uploadsPlaylistId);
+
+        if (videoIds.isEmpty()) {
+            return List.of();
+        }
+
+        // 3) 영상 상세 조회
+        List<Map<String, Object>> videos =
+                getVideosByIdsWithDetails(accessToken, new ArrayList<>(videoIds));
+
+        // 4) Topic 채널용 최소 필터
+        List<Map<String, Object>> result = new ArrayList<>();
+
+        for (Map<String, Object> v : videos) {
+            Map<String, Object> snippet =
+                    (Map<String, Object>) v.get("snippet");
+            Map<String, Object> contentDetails =
+                    (Map<String, Object>) v.get("contentDetails");
+
+            if (snippet == null || contentDetails == null) continue;
+
+            String durationIso = (String) contentDetails.get("duration");
+            int seconds = parseIsoDurationToSeconds(durationIso);
+
+            // 혹시 모를 shorts 제거
+            if (seconds > 0 && seconds <= 60) continue;
+
+            result.add(v);
+        }
+
+        return deduplicateByNormalizedTitle(result, artistName);
+    }
+
+    public List<Map<String, Object>> deduplicateByNormalizedTitle(
+            List<Map<String, Object>> videos,
+            String artistName
+    ) {
+        Map<String, Map<String, Object>> unique = new LinkedHashMap<>();
+
+        for (Map<String, Object> v : videos) {
+            Map<String, Object> snippet =
+                    (Map<String, Object>) v.get("snippet");
+            if (snippet == null) continue;
+
+            String rawTitle = (String) snippet.get("title");
+            String channelTitle = (String) snippet.get("channelTitle");
+
+            // 안전하게 artistName fallback
+            String artist = artistName != null ? artistName : channelTitle;
+
+            String normalized =
+                    normalizeSongTitle(rawTitle, artist);
+
+            if (normalized.isEmpty()) continue;
+
+            // ⭐ 이미 있으면 스킵 (첫 번째 것만 유지)
+            unique.putIfAbsent(normalized, v);
+        }
+
+        return new ArrayList<>(unique.values());
+    }
 
 
 

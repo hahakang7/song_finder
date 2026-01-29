@@ -58,8 +58,24 @@ public class ArtistController {
                         accessToken, new ArrayList<>(artistVideoIds));
 
         // 4) 곡 후보만 필터링
+        // 아티스트명은 snippet.channelTitle 기준으로 이미 확보 가능
+        String artistName = (String)
+                ((Map<String, Object>) artistVideosDetailed.get(0)
+                        .get("snippet"))
+                        .get("channelTitle");
+
+        // 4-1) Topic 채널 시도
         List<Map<String, Object>> artistSongsDetailed =
-                youtubeService.filterLikelySongs(artistVideosDetailed);
+                youtubeService.loadSongsFromTopicChannel(
+                        artistName,
+                        accessToken
+                );
+
+        // 4-2) Topic이 없으면 공식 채널 fallback
+        if (artistSongsDetailed.isEmpty()) {
+            artistSongsDetailed =
+                    youtubeService.filterLikelySongs(artistVideosDetailed);
+        }
 
         // 5) 플레이리스트 videoId 수집
         Set<String> playlistVideoIds =
@@ -89,6 +105,7 @@ public class ArtistController {
 
         // 7) 아티스트 곡 vs 플레이리스트 비교
         List<Map<String, Object>> missingVideos = new ArrayList<>();
+        List<Map<String, Object>> containedVideos = new ArrayList<>();
 
         for (Map<String, Object> v : artistSongsDetailed) {
             Map<String, Object> snippet = (Map<String, Object>) v.get("snippet");
@@ -108,19 +125,22 @@ public class ArtistController {
                 }
             }
 
-            if (!contained) {
-                // 화면 표시용
-                snippet.put("normalizedTitle", normalizedArtistTitle);
+            snippet.put("normalizedTitle", normalizedArtistTitle);
+
+            if (contained) {
+                containedVideos.add(v);
+            } else {
                 missingVideos.add(v);
             }
         }
 
-        model.addAttribute("missingVideos", missingVideos);
-        model.addAttribute("missingCount", missingVideos.size());
 
-        // 디버그 정보
-        model.addAttribute("rawCount", artistVideoIds.size());
-        model.addAttribute("filteredCount", artistSongsDetailed.size());
+        model.addAttribute("missingVideos", missingVideos);
+        model.addAttribute("containedVideos", containedVideos);
+
+        model.addAttribute("missingCount", missingVideos.size());
+        model.addAttribute("containedCount", containedVideos.size());
+
 
         return "compare-result";
     }
