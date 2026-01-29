@@ -1,8 +1,11 @@
 package hyun9.song_finder.domain;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+
 import java.time.LocalDateTime;
 
+@Getter
 @Entity
 @Table(
         name = "dump_song",
@@ -40,25 +43,4 @@ public class DumpSong {
         this.normalizedTitle = normalizedTitle;
     }
 
-    // ===== getter =====
-
-    public Long getId() {
-        return id;
-    }
-
-    public String getUserId() {
-        return userId;
-    }
-
-    public String getChannelId() {
-        return channelId;
-    }
-
-    public String getNormalizedTitle() {
-        return normalizedTitle;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
 }
