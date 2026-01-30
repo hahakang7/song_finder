@@ -9,10 +9,12 @@
             gap: 40px;
         }
         .column {
-            width: 50%;
+            width: 33%;
         }
         img {
             vertical-align: middle;
+            width: 60px;
+            height: auto;
         }
         li {
             margin-bottom: 8px;
@@ -21,20 +23,37 @@
 </head>
 <body>
 
-<h2>비교 결과</h2>
+<h2>비교 결과 (디버그)</h2>
 
 <p>
-    플레이리스트에 없는 항목 수:
+    Dump된 곡 수:
+    <b th:text="${dumpedCount}">0</b>
+</p>
+<p>
+    플레이리스트에 없는 곡 수:
     <b th:text="${missingCount}">0</b>
 </p>
 <p>
-    플레이리스트에 있는 항목 수:
+    플레이리스트에 있는 곡 수:
     <b th:text="${containedCount}">0</b>
 </p>
 
 <div class="container">
 
-    <!-- 좌측: 플레이리스트에 없는 곡 -->
+    <!-- 좌측: Dump된 곡 -->
+    <div class="column">
+        <h3>Dump된 곡</h3>
+
+        <ul>
+            <li th:each="v : ${dumpedVideos}">
+                <img th:src="${v.snippet.thumbnails.default.url}" alt="thumb"/>
+                <span th:text="${v.snippet.normalizedTitle}"></span>
+                <span style="color: red;">(제외됨)</span>
+            </li>
+        </ul>
+    </div>
+
+    <!-- 중앙: 플레이리스트에 없는 곡 -->
     <div class="column">
         <h3>플레이리스트에 없는 곡</h3>
 
@@ -42,7 +61,15 @@
             <li th:each="v : ${missingVideos}">
                 <img th:src="${v.snippet.thumbnails.default.url}" alt="thumb"/>
                 <span th:text="${v.snippet.normalizedTitle}"></span>
-                <!-- 나중에 Dump 버튼 자리 -->
+                <!-- 나중에 Dump 버튼 -->
+                <form th:action="@{/dump}" method="post" style="display:inline;">
+                    <input type="hidden" name="channelId" th:value="${channelId}" />
+                    <input type="hidden" name="playlistId" th:value="${playlistId}" />
+                    <input type="hidden" name="normalizedTitle"
+                           th:value="${v.snippet.normalizedTitle}" />
+                    <button type="submit">이 곡 제외</button>
+                </form>
+
                 <!-- <button>이 곡 제외</button> -->
             </li>
         </ul>
@@ -62,6 +89,8 @@
     </div>
 
 </div>
+
+<hr/>
 
 <a href="/playlists">전체 재생목록으로 돌아가기</a>
 
