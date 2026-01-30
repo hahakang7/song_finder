@@ -1,0 +1,10 @@
+package hyun9.song_finder.repository;
+
+import hyun9.song_finder.domain.SubscribedPlaylist;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.Optional;
+
+public interface SubscribedPlaylistRepository extends JpaRepository<SubscribedPlaylist, Long> {
+    Optional<SubscribedPlaylist> findByUserIdAndPlaylistId(String userId, String playlistId);
+}
