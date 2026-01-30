@@ -1,5 +1,6 @@
 package hyun9.song_finder.controller;
 
+import hyun9.song_finder.service.DumpService;
 import hyun9.song_finder.service.YoutubeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -8,6 +9,7 @@ import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -19,9 +21,9 @@ public class ArtistController {
 
     private final YoutubeService youtubeService;
     private final OAuth2AuthorizedClientService clientService;
+    private final DumpService dumpService;
 
-
-    @PostMapping("/compare")
+    @GetMapping("/compare")
     public String compareChannelWithPlaylist(
             @AuthenticationPrincipal OAuth2User principal,
             @RequestParam("channelId") String channelId,
@@ -34,6 +36,8 @@ public class ArtistController {
                 clientService.loadAuthorizedClient("google", principal.getName());
         String accessToken = client.getAccessToken().getTokenValue();
 
+        String userId = principal.getName();
+
         // 1) 채널 uploads playlistId
         String uploadsPlaylistId = youtubeService.getUploadsPlaylistId(channelId);
         if (uploadsPlaylistId == null) {
@@ -41,43 +45,30 @@ public class ArtistController {
             return "error";
         }
 
-        // 2) 아티스트 uploads videoId 수집
+        // 2) 아티스트 영상 수집
         Set<String> artistVideoIds =
                 youtubeService.getAllVideoIdsInPlaylist(accessToken, uploadsPlaylistId);
 
-        if (artistVideoIds.isEmpty()) {
-            model.addAttribute("missingVideos", List.of());
-            model.addAttribute("missingCount", 0);
-            model.addAttribute("note", "채널 업로드 목록에서 영상이 발견되지 않았습니다.");
-            return "compare-result";
-        }
-
-        // 3) 아티스트 영상 상세 조회
         List<Map<String, Object>> artistVideosDetailed =
                 youtubeService.getVideosByIdsWithDetails(
                         accessToken, new ArrayList<>(artistVideoIds));
 
-        // 4) 곡 후보만 필터링
-        // 아티스트명은 snippet.channelTitle 기준으로 이미 확보 가능
+        // 3) Topic 채널 우선 곡 수집
         String artistName = (String)
                 ((Map<String, Object>) artistVideosDetailed.get(0)
                         .get("snippet"))
                         .get("channelTitle");
 
-        // 4-1) Topic 채널 시도
         List<Map<String, Object>> artistSongsDetailed =
-                youtubeService.loadSongsFromTopicChannel(
-                        artistName,
-                        accessToken
-                );
+                youtubeService.loadSongsFromTopicChannel(artistName, accessToken);
 
-        // 4-2) Topic이 없으면 공식 채널 fallback
+        // fallback
         if (artistSongsDetailed.isEmpty()) {
             artistSongsDetailed =
                     youtubeService.filterLikelySongs(artistVideosDetailed);
         }
 
-        // 5) 플레이리스트 videoId 수집
+        // 4) 플레이리스트 곡 제목 Set
         Set<String> playlistVideoIds =
                 youtubeService.getAllVideoIdsInPlaylist(accessToken, playlistId);
 
@@ -85,9 +76,7 @@ public class ArtistController {
                 youtubeService.getVideosByIdsWithDetails(
                         accessToken, new ArrayList<>(playlistVideoIds));
 
-        // 6) 플레이리스트 정제된 곡 제목 Set
         Set<String> playlistSongTitles = new HashSet<>();
-
         for (Map<String, Object> v : playlistVideosDetailed) {
             Map<String, Object> snippet = (Map<String, Object>) v.get("snippet");
             if (snippet == null) continue;
@@ -103,7 +92,12 @@ public class ArtistController {
             }
         }
 
-        // 7) 아티스트 곡 vs 플레이리스트 비교
+        // 5) Dump 목록 조회
+        Set<String> dumpedTitles =
+                dumpService.getDumpedTitles(userId, channelId);
+
+        // 6) 결과 3분기
+        List<Map<String, Object>> dumpedVideos = new ArrayList<>();
         List<Map<String, Object>> missingVideos = new ArrayList<>();
         List<Map<String, Object>> containedVideos = new ArrayList<>();
 
@@ -114,35 +108,52 @@ public class ArtistController {
             String rawTitle = (String) snippet.get("title");
             String channelTitle = (String) snippet.get("channelTitle");
 
-            String normalizedArtistTitle =
+            String normalized =
                     youtubeService.normalizeSongTitle(rawTitle, channelTitle);
 
-            boolean contained = false;
-            for (String plTitle : playlistSongTitles) {
-                if (normalizedArtistTitle.contains(plTitle)) {
-                    contained = true;
-                    break;
-                }
-            }
+            if (normalized.isEmpty()) continue;
 
-            snippet.put("normalizedTitle", normalizedArtistTitle);
+            // 표시용
+            snippet.put("normalizedTitle", normalized);
 
-            if (contained) {
+            if (dumpedTitles.contains(normalized)) {
+                dumpedVideos.add(v);
+            } else if (playlistSongTitles.contains(normalized)) {
                 containedVideos.add(v);
             } else {
                 missingVideos.add(v);
             }
         }
 
-
+        // 7) model 전달
+        model.addAttribute("dumpedVideos", dumpedVideos);
         model.addAttribute("missingVideos", missingVideos);
         model.addAttribute("containedVideos", containedVideos);
 
+        model.addAttribute("dumpedCount", dumpedVideos.size());
         model.addAttribute("missingCount", missingVideos.size());
         model.addAttribute("containedCount", containedVideos.size());
 
+        model.addAttribute("channelId", channelId);
+        model.addAttribute("playlistId", playlistId);
 
         return "compare-result";
+    }
+
+
+    @PostMapping("/dump")
+    public String dumpSong(
+            @AuthenticationPrincipal OAuth2User principal,
+            @RequestParam("channelId") String channelId,
+            @RequestParam("playlistId") String playlistId,
+            @RequestParam("normalizedTitle") String normalizedTitle
+    ) {
+        String userId = principal.getName();
+
+        dumpService.dumpSong(userId, channelId, normalizedTitle);
+
+        // 다시 비교 화면으로
+        return "redirect:/compare?channelId=" + channelId + "&playlistId=" + playlistId;
     }
 
 

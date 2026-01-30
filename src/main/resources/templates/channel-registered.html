@@ -17,8 +17,9 @@
 
 <h2>비교할 내 플레이리스트 선택</h2>
 
-<form th:action="@{/compare}" method="post">
+<form th:action="@{/compare}" method="get">
     <input type="hidden" name="channelId" th:value="${channelId}">
+
     <select name="playlistId" required>
         <option value="" disabled selected>플레이리스트 선택</option>
         <option th:each="pl : ${playlists}"
@@ -26,8 +27,10 @@
                 th:text="${pl.snippet.title}">
         </option>
     </select>
+
     <button type="submit">비교하기</button>
 </form>
+
 
 <p th:if="${error}" th:text="${error}" style="color:red;"></p>
 
