@@ -1,12 +1,13 @@
 package hyun9.song_finder.domain;
 
 import jakarta.persistence.*;
+import lombok.Getter;
 
 /**
  * 사용자의 플레이리스트 곡 스냅샷
  * */
 
-
+@Getter
 @Entity
 @Table(
         name = "playlist_song",

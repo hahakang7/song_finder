@@ -7,4 +7,6 @@ import java.util.Optional;
 
 public interface SubscribedPlaylistRepository extends JpaRepository<SubscribedPlaylist, Long> {
     Optional<SubscribedPlaylist> findByUserIdAndPlaylistId(String userId, String playlistId);
+    boolean existsByUserIdAndPlaylistId(String userId, String playlistId);
+
 }

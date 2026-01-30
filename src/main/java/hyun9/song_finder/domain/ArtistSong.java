@@ -1,6 +1,7 @@
 package hyun9.song_finder.domain;
 
 import jakarta.persistence.*;
+import lombok.Getter;
 
 /**
  * 아티스트 곡 스냅샷
@@ -8,6 +9,7 @@ import jakarta.persistence.*;
  * 이 아티스트가 갖고있는 곡은 무엇인가?
  * **/
 
+@Getter
 @Entity
 @Table(
         name = "artist_song",
