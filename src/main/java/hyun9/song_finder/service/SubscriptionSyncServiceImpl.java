@@ -31,46 +31,77 @@ public class SubscriptionSyncServiceImpl implements SubscriptionSyncService {
             String playlistId,
             String playlistTitle
     ) {
-        // 1) 구독 메타 upsert
-        SubscribedPlaylist sub = subscribedPlaylistRepository
-                .findByUserIdAndPlaylistId(userId, playlistId)
-                .orElseGet(() -> subscribedPlaylistRepository.save(
-                        new SubscribedPlaylist(userId, playlistId, playlistTitle)
-                ));
 
-        // 2) YouTube API로 플레이리스트 전체 곡 가져오기 (네 기존 로직 재사용)
-        Set<String> videoIds = youtubeService.getAllVideoIdsInPlaylist(accessToken, playlistId);
+        // 1. 구독 메타 저장 (기존 그대로)
+        SubscribedPlaylist sub =
+                subscribedPlaylistRepository
+                        .findByUserIdAndPlaylistId(userId, playlistId)
+                        .orElseGet(() ->
+                                subscribedPlaylistRepository.save(
+                                        new SubscribedPlaylist(
+                                                userId,
+                                                playlistId,
+                                                playlistTitle
+                                        )
+                                )
+                        );
 
-        List<Map<String, Object>> videosDetailed = youtubeService.getVideosByIdsWithDetails(
-                accessToken, new ArrayList<>(videoIds)
-        );
+        // 2. 플레이리스트 영상 조회
+        Set<String> videoIds =
+                youtubeService.getAllVideoIdsInPlaylist(accessToken, playlistId);
 
-        // 3) normalizedTitle Set 만들기 (중복 제거)
-        Set<String> normalizedTitles = new HashSet<>();
+        List<Map<String, Object>> videosDetailed =
+                youtubeService.getVideosByIdsWithDetails(
+                        accessToken,
+                        new ArrayList<>(videoIds)
+                );
+
+        // =========================
+        // ✅ 여기부터 핵심 수정 부분
+        // =========================
+
+        // normalizedTitle -> thumbnailUrl
+        Map<String, String> titleToThumb = new HashMap<>();
+
         for (Map<String, Object> v : videosDetailed) {
-            Map<String, Object> snippet = (Map<String, Object>) v.get("snippet");
+            Map<String, Object> snippet =
+                    (Map<String, Object>) v.get("snippet");
             if (snippet == null) continue;
 
             String rawTitle = (String) snippet.get("title");
             String channelTitle = (String) snippet.get("channelTitle");
 
-            String normalized = youtubeService.normalizeSongTitle(rawTitle, channelTitle);
-            if (!normalized.isBlank()) normalizedTitles.add(normalized);
+            String normalized =
+                    youtubeService.normalizeSongTitle(rawTitle, channelTitle);
+            if (normalized.isBlank()) continue;
+
+            // 🔹 여기서 1번에서 만든 메서드 사용
+            String thumbnailUrl =
+                    youtubeService.extractDefaultThumbnailUrl(snippet);
+
+            // 중복 title 방지 (이미 있으면 무시)
+            titleToThumb.putIfAbsent(normalized, thumbnailUrl);
         }
 
-        // 4) Replace 전략: 기존 스냅샷 삭제 후 재삽입
+        // 3. Replace 전략
         playlistSongRepository.deleteByPlaylistId(playlistId);
 
-        List<PlaylistSong> rows = new ArrayList<>(normalizedTitles.size());
-        for (String t : normalizedTitles) {
-            rows.add(new PlaylistSong(playlistId, t));
+        List<PlaylistSong> rows = new ArrayList<>(titleToThumb.size());
+        for (Map.Entry<String, String> e : titleToThumb.entrySet()) {
+            rows.add(new PlaylistSong(
+                    playlistId,
+                    e.getKey(),
+                    e.getValue()
+            ));
         }
+
         playlistSongRepository.saveAll(rows);
 
-        // 5) lastSyncedAt 갱신
+        // 4. 동기화 시각 갱신
         sub.markSynced();
         subscribedPlaylistRepository.save(sub);
     }
+
 
     /**
      * 아티스트 구독 + 곡 스냅샷 동기화
@@ -85,50 +116,86 @@ public class SubscriptionSyncServiceImpl implements SubscriptionSyncService {
             String channelId,
             String artistName
     ) {
-        // 1) 구독 메타 upsert
-        SubscribedArtist sub = subscribedArtistRepository
-                .findByUserIdAndChannelId(userId, channelId)
-                .orElseGet(() -> subscribedArtistRepository.save(
-                        new SubscribedArtist(userId, channelId, artistName)
-                ));
 
-        // 2) Topic 우선으로 곡 목록 수집 (네가 이미 만든 메서드 기반)
-        List<Map<String, Object>> artistSongs = youtubeService.loadSongsFromTopicChannel(artistName, accessToken);
+        // 1. 아티스트 구독 메타 저장
+        SubscribedArtist sub =
+                subscribedArtistRepository
+                        .findByUserIdAndChannelId(userId, channelId)
+                        .orElseGet(() ->
+                                subscribedArtistRepository.save(
+                                        new SubscribedArtist(
+                                                userId,
+                                                channelId,
+                                                artistName
+                                        )
+                                )
+                        );
 
-        // fallback: 공식 uploads
-        if (artistSongs.isEmpty()) {
-            String uploadsPlaylistId = youtubeService.getUploadsPlaylistId(channelId);
-            if (uploadsPlaylistId != null) {
-                Set<String> ids = youtubeService.getAllVideoIdsInPlaylist(accessToken, uploadsPlaylistId);
-                List<Map<String, Object>> detailed = youtubeService.getVideosByIdsWithDetails(accessToken, new ArrayList<>(ids));
-                artistSongs = youtubeService.filterLikelySongs(detailed);
-            }
+        // 2. 아티스트 곡 영상 수집
+        // (지금은 uploads 기준, Topic 전략을 쓰고 있다면 거기서 받아온 리스트)
+        String uploadsPlaylistId =
+                youtubeService.getUploadsPlaylistId(channelId);
+
+        if (uploadsPlaylistId == null) {
+            return; // 방어 (정상 채널이 아닌 경우)
         }
 
-        // 3) normalizedTitle Set 만들기 (중복 제거)
-        Set<String> normalizedTitles = new HashSet<>();
+        Set<String> videoIds =
+                youtubeService.getAllVideoIdsInPlaylist(accessToken, uploadsPlaylistId);
+
+        List<Map<String, Object>> videosDetailed =
+                youtubeService.getVideosByIdsWithDetails(
+                        accessToken,
+                        new ArrayList<>(videoIds)
+                );
+
+        List<Map<String, Object>> artistSongs =
+                youtubeService.filterLikelySongs(videosDetailed);
+
+        // =========================
+        // ✅ 여기부터 핵심 로직
+        // =========================
+
+        // normalizedTitle -> thumbnailUrl
+        Map<String, String> titleToThumb = new HashMap<>();
+
         for (Map<String, Object> v : artistSongs) {
-            Map<String, Object> snippet = (Map<String, Object>) v.get("snippet");
+            Map<String, Object> snippet =
+                    (Map<String, Object>) v.get("snippet");
             if (snippet == null) continue;
 
             String rawTitle = (String) snippet.get("title");
-            String channelTitle = (String) snippet.get("channelTitle");
+            if (rawTitle == null) continue;
 
-            String normalized = youtubeService.normalizeSongTitle(rawTitle, channelTitle);
-            if (!normalized.isBlank()) normalizedTitles.add(normalized);
+            // ❗ artistName은 고정값 사용
+            String normalized =
+                    youtubeService.normalizeSongTitle(rawTitle, artistName);
+            if (normalized.isBlank()) continue;
+
+            String thumbnailUrl =
+                    youtubeService.extractDefaultThumbnailUrl(snippet);
+
+            // 동일 곡 중복 방지
+            titleToThumb.putIfAbsent(normalized, thumbnailUrl);
         }
 
-        // 4) Replace 전략: 기존 스냅샷 삭제 후 재삽입
+        // 3. Replace 전략
         artistSongRepository.deleteByChannelId(channelId);
 
-        List<ArtistSong> rows = new ArrayList<>(normalizedTitles.size());
-        for (String t : normalizedTitles) {
-            rows.add(new ArtistSong(channelId, t));
+        List<ArtistSong> rows = new ArrayList<>(titleToThumb.size());
+        for (Map.Entry<String, String> e : titleToThumb.entrySet()) {
+            rows.add(new ArtistSong(
+                    channelId,          // ❗ 항상 channelId
+                    e.getKey(),         // normalizedTitle
+                    e.getValue()        // thumbnailUrl
+            ));
         }
+
         artistSongRepository.saveAll(rows);
 
-        // 5) lastSyncedAt 갱신
+        // 4. 동기화 시각 갱신
         sub.markSynced();
         subscribedArtistRepository.save(sub);
     }
+
 }

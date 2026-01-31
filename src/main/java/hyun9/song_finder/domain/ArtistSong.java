@@ -29,11 +29,16 @@ public class ArtistSong {
     @Column(name = "normalized_title", nullable = false)
     private String normalizedTitle;
 
+    @Column(name = "thumbnail_url")
+    private String thumbnailUrl; // ✅ 추가
+
     protected ArtistSong() {}
 
-    public ArtistSong(String channelId, String normalizedTitle) {
+    public ArtistSong(String channelId, String normalizedTitle, String thumbnailUrl) {
         this.channelId = channelId;
         this.normalizedTitle = normalizedTitle;
+        this.thumbnailUrl = thumbnailUrl;
     }
 }
+
 

@@ -27,11 +27,16 @@ public class PlaylistSong {
     @Column(name = "normalized_title", nullable = false)
     private String normalizedTitle;
 
+    @Column(name = "thumbnail_url")
+    private String thumbnailUrl; // ✅ 추가
+
     protected PlaylistSong() {}
 
-    public PlaylistSong(String playlistId, String normalizedTitle) {
+    public PlaylistSong(String playlistId, String normalizedTitle, String thumbnailUrl) {
         this.playlistId = playlistId;
         this.normalizedTitle = normalizedTitle;
+        this.thumbnailUrl = thumbnailUrl;
     }
 }
+
 
