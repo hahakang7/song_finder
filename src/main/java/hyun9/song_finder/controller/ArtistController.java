@@ -67,8 +67,12 @@ public class ArtistController {
 
         model.addAttribute("items", items);
 
+
         model.addAttribute("channelId", channelId);
         model.addAttribute("playlistId", playlistId);
+
+        model.addAttribute("artistSubscribed", artistSubscribed);
+        model.addAttribute("playlistSubscribed", playlistSubscribed);
 
 
         // (선택) 카운트

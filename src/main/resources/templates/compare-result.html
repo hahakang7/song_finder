@@ -50,6 +50,57 @@
 
 <h2>비교 결과</h2>
 
+<hr>
+
+<div>
+
+    <!-- 아티스트 구독 -->
+    <div>
+        <span>아티스트:</span>
+
+        <span th:if="${artistSubscribed}">
+            ✅ 구독됨
+        </span>
+
+        <form th:if="${!artistSubscribed}"
+              th:action="@{/subscribe/artist}"
+              method="post"
+              style="display:inline">
+
+            <input type="hidden" name="channelId" th:value="${channelId}">
+            <input type="hidden" name="artistName" th:value="${artistName}">
+            <input type="hidden" name="playlistId" th:value="${playlistId}">
+
+            <button type="submit">아티스트 구독</button>
+        </form>
+    </div>
+
+    <!-- 플레이리스트 구독 -->
+    <div>
+        <span>플레이리스트:</span>
+
+        <span th:if="${playlistSubscribed}">
+            ✅ 구독됨
+        </span>
+
+        <form th:if="${!playlistSubscribed}"
+              th:action="@{/subscribe/playlist}"
+              method="post"
+              style="display:inline">
+
+            <input type="hidden" name="playlistId" th:value="${playlistId}">
+            <input type="hidden" name="playlistTitle" th:value="${playlistTitle}">
+            <input type="hidden" name="channelId" th:value="${channelId}">
+
+            <button type="submit">플레이리스트 구독</button>
+        </form>
+    </div>
+
+</div>
+
+<hr>
+
+
 <p>
     제외됨: <b th:text="${dumpedCount}">0</b> /
     없는 곡: <b th:text="${missingCount}">0</b> /
