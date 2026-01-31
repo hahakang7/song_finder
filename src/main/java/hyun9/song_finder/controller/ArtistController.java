@@ -2,6 +2,8 @@ package hyun9.song_finder.controller;
 
 import hyun9.song_finder.domain.ArtistSong;
 import hyun9.song_finder.domain.PlaylistSong;
+import hyun9.song_finder.dto.CompareItemDTO;
+import hyun9.song_finder.dto.CompareStatus;
 import hyun9.song_finder.repository.ArtistSongRepository;
 import hyun9.song_finder.repository.PlaylistSongRepository;
 import hyun9.song_finder.repository.SubscribedArtistRepository;
@@ -27,7 +29,6 @@ public class ArtistController {
 
     private final YoutubeService youtubeService;
     private final DumpService dumpService;
-
     private final OAuth2AuthorizedClientService clientService;
 
     private final SubscribedArtistRepository subscribedArtistRepository;
@@ -56,89 +57,49 @@ public class ArtistController {
         boolean playlistSubscribed =
                 subscribedPlaylistRepository.existsByUserIdAndPlaylistId(userId, playlistId);
 
+        List<CompareItemDTO> items;
+
         if (artistSubscribed && playlistSubscribed) {
-            return compareWithDb(userId, channelId, playlistId, model);
+            items = compareWithDb(userId, channelId, playlistId);
+        } else {
+            items = compareWithApi(principal, userId, channelId, playlistId);
         }
 
-        return compareWithApi(principal, channelId, playlistId, model);
-    }
+        model.addAttribute("items", items);
 
-    /**
-     * ===============================
-     * DB 기반 Warm Compare
-     * ===============================
-     */
-    private String compareWithDb(
-            String userId,
-            String channelId,
-            String playlistId,
-            Model model
-    ) {
+        model.addAttribute("channelId", channelId);
+        model.addAttribute("playlistId", playlistId);
 
-        // 1) DB에서 곡 제목 로딩
-        Set<String> artistTitles =
-                artistSongRepository.findByChannelId(channelId)
-                        .stream()
-                        .map(ArtistSong::getNormalizedTitle)
-                        .collect(Collectors.toSet());
 
-        Set<String> playlistTitles =
-                playlistSongRepository.findByPlaylistId(playlistId)
-                        .stream()
-                        .map(PlaylistSong::getNormalizedTitle)
-                        .collect(Collectors.toSet());
-
-        Set<String> dumpedTitles =
-                dumpService.getDumpedTitles(userId, channelId);
-
-        // 2) 분기
-        List<String> dumped = new ArrayList<>();
-        List<String> contained = new ArrayList<>();
-        List<String> missing = new ArrayList<>();
-
-        for (String title : artistTitles) {
-            if (dumpedTitles.contains(title)) {
-                dumped.add(title);
-            } else if (playlistTitles.contains(title)) {
-                contained.add(title);
-            } else {
-                missing.add(title);
-            }
-        }
-
-        // 3) view 전달 (DB 모드는 제목만)
-        model.addAttribute("dumpedTitles", dumped);
-        model.addAttribute("containedTitles", contained);
-        model.addAttribute("missingTitles", missing);
-
-        model.addAttribute("dumpedCount", dumped.size());
-        model.addAttribute("containedCount", contained.size());
-        model.addAttribute("missingCount", missing.size());
-
-        model.addAttribute("mode", "DB");
+        // (선택) 카운트
+        model.addAttribute("dumpedCount",
+                items.stream().filter(i -> i.getStatus() == CompareStatus.DUMPED).count());
+        model.addAttribute("missingCount",
+                items.stream().filter(i -> i.getStatus() == CompareStatus.MISSING).count());
+        model.addAttribute("containedCount",
+                items.stream().filter(i -> i.getStatus() == CompareStatus.CONTAINED).count());
 
         return "compare-result";
     }
+
 
     /**
      * ===============================
      * API 기반 Cold Compare (기존 로직)
      * ===============================
      */
-    private String compareWithApi(
+    private List<CompareItemDTO> compareWithApi(
             OAuth2User principal,
+            String userId,
             String channelId,
-            String playlistId,
-            Model model
+            String playlistId
     ) {
 
         OAuth2AuthorizedClient client =
                 clientService.loadAuthorizedClient("google", principal.getName());
         String accessToken = client.getAccessToken().getTokenValue();
 
-        String userId = principal.getName();
-
-        // 1) 아티스트 uploads
+        // 1) 아티스트 영상 수집
         String uploadsPlaylistId =
                 youtubeService.getUploadsPlaylistId(channelId);
 
@@ -147,18 +108,22 @@ public class ArtistController {
 
         List<Map<String, Object>> artistVideosDetailed =
                 youtubeService.getVideosByIdsWithDetails(
-                        accessToken, new ArrayList<>(artistVideoIds));
+                        accessToken,
+                        new ArrayList<>(artistVideoIds)
+                );
 
         List<Map<String, Object>> artistSongs =
                 youtubeService.filterLikelySongs(artistVideosDetailed);
 
-        // 2) 플레이리스트
+        // 2) 플레이리스트 title set
         Set<String> playlistVideoIds =
                 youtubeService.getAllVideoIdsInPlaylist(accessToken, playlistId);
 
         List<Map<String, Object>> playlistVideos =
                 youtubeService.getVideosByIdsWithDetails(
-                        accessToken, new ArrayList<>(playlistVideoIds));
+                        accessToken,
+                        new ArrayList<>(playlistVideoIds)
+                );
 
         Set<String> playlistTitles = new HashSet<>();
         for (Map<String, Object> v : playlistVideos) {
@@ -179,10 +144,8 @@ public class ArtistController {
         Set<String> dumpedTitles =
                 dumpService.getDumpedTitles(userId, channelId);
 
-        // 3) 분기
-        List<Map<String, Object>> dumped = new ArrayList<>();
-        List<Map<String, Object>> contained = new ArrayList<>();
-        List<Map<String, Object>> missing = new ArrayList<>();
+        // 3) artist songs → DTO
+        Map<String, String> artistMap = new LinkedHashMap<>();
 
         for (Map<String, Object> v : artistSongs) {
             Map<String, Object> snippet = (Map<String, Object>) v.get("snippet");
@@ -193,31 +156,82 @@ public class ArtistController {
 
             String normalized =
                     youtubeService.normalizeSongTitle(rawTitle, channelTitle);
-
             if (normalized.isBlank()) continue;
 
-            snippet.put("normalizedTitle", normalized);
+            String thumb =
+                    youtubeService.extractDefaultThumbnailUrl(snippet);
 
-            if (dumpedTitles.contains(normalized)) {
-                dumped.add(v);
-            } else if (playlistTitles.contains(normalized)) {
-                contained.add(v);
-            } else {
-                missing.add(v);
-            }
+            artistMap.putIfAbsent(normalized, thumb);
         }
 
-        // 4) view 전달
-        model.addAttribute("dumpedVideos", dumped);
-        model.addAttribute("containedVideos", contained);
-        model.addAttribute("missingVideos", missing);
+        List<CompareItemDTO> items = new ArrayList<>(artistMap.size());
 
-        model.addAttribute("dumpedCount", dumped.size());
-        model.addAttribute("containedCount", contained.size());
-        model.addAttribute("missingCount", missing.size());
+        for (Map.Entry<String, String> e : artistMap.entrySet()) {
+            String title = e.getKey();
+            String thumb = e.getValue();
 
-        model.addAttribute("mode", "API");
+            CompareStatus status;
+            if (dumpedTitles.contains(title)) {
+                status = CompareStatus.DUMPED;
+            } else if (playlistTitles.contains(title)) {
+                status = CompareStatus.CONTAINED;
+            } else {
+                status = CompareStatus.MISSING;
+            }
 
-        return "compare-result";
+            items.add(new CompareItemDTO(title, thumb, status));
+        }
+
+        return items;
+    }
+
+
+    private List<CompareItemDTO> compareWithDb(
+            String userId,
+            String channelId,
+            String playlistId
+    ) {
+
+        // 1) artist: normalizedTitle -> thumbnailUrl
+        Map<String, String> artistMap =
+                artistSongRepository.findByChannelId(channelId)
+                        .stream()
+                        .collect(Collectors.toMap(
+                                ArtistSong::getNormalizedTitle,
+                                ArtistSong::getThumbnailUrl,
+                                (a, b) -> a
+                        ));
+
+        // 2) playlist title set
+        Set<String> playlistTitles =
+                playlistSongRepository.findByPlaylistId(playlistId)
+                        .stream()
+                        .map(PlaylistSong::getNormalizedTitle)
+                        .collect(Collectors.toSet());
+
+        // 3) dump set
+        Set<String> dumpedTitles =
+                dumpService.getDumpedTitles(userId, channelId);
+
+        // 4) 조립
+        List<CompareItemDTO> items = new ArrayList<>(artistMap.size());
+
+        for (Map.Entry<String, String> e : artistMap.entrySet()) {
+            String title = e.getKey();
+            String thumb = e.getValue();
+
+            CompareStatus status;
+            if (dumpedTitles.contains(title)) {
+                status = CompareStatus.DUMPED;
+            } else if (playlistTitles.contains(title)) {
+                status = CompareStatus.CONTAINED;
+            } else {
+                status = CompareStatus.MISSING;
+            }
+
+            items.add(new CompareItemDTO(title, thumb, status));
+        }
+
+        return items;
     }
 }

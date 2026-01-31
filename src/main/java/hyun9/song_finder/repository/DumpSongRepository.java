@@ -7,9 +7,22 @@ import java.util.List;
 import java.util.Optional;
 
 public interface DumpSongRepository extends JpaRepository<DumpSong, Long> {
+
     List<DumpSong> findByUserIdAndChannelId(String userId, String channelId);
 
     Optional<DumpSong> findByUserIdAndChannelIdAndNormalizedTitle(
+            String userId,
+            String channelId,
+            String normalizedTitle
+    );
+
+    boolean existsByUserIdAndChannelIdAndNormalizedTitle(
+            String userId,
+            String channelId,
+            String normalizedTitle
+    );
+
+    void deleteByUserIdAndChannelIdAndNormalizedTitle(
             String userId,
             String channelId,
             String normalizedTitle

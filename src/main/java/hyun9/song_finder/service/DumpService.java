@@ -6,5 +6,11 @@ public interface DumpService {
 
     Set<String> getDumpedTitles(String userId, String channelId);
 
-    void dumpSong(String userId, String channelId, String normalizedTitle);
+    void dump(String userId, String channelId, String normalizedTitle);
+
+    void undo(
+            String userId,
+            String channelId,
+            String normalizedTitle
+    );
 }
