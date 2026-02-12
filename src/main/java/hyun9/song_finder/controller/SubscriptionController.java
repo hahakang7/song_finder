@@ -1,5 +1,6 @@
 package hyun9.song_finder.controller;
 
+import hyun9.song_finder.repository.SubscribedArtistRepository;
 import hyun9.song_finder.repository.SubscribedPlaylistRepository;
 import hyun9.song_finder.service.SubscriptionSyncService;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ public class SubscriptionController {
 
     private final SubscriptionSyncService subscriptionSyncService;
     private final SubscribedPlaylistRepository subscribedPlaylistRepository;
+    private final SubscribedArtistRepository subscribedArtistRepository;
     private final OAuth2AuthorizedClientService clientService;
 
     @PostMapping("/artist")
@@ -44,6 +46,53 @@ public class SubscriptionController {
                 + channelId + "&playlistId=" + playlistId;
     }
 
+    //아티스트 구독이 되어있으면 구독 해지하는 메서드
+    @PostMapping("/artist/toggle")
+    public String toggleArtist(
+            @AuthenticationPrincipal OAuth2User principal,
+            @RequestParam("channelId") String channelId,
+            @RequestParam("artistName") String artistName
+    ) {
+        String userId = principal.getName();
+
+        boolean subscribed =
+                subscribedArtistRepository.existsByUserIdAndChannelId(userId, channelId);
+
+        if (subscribed) {
+            subscriptionSyncService.unsubscribeArtist(userId, channelId);
+            return "redirect:/artist/" + channelId;
+        }
+
+        OAuth2AuthorizedClient client =
+                clientService.loadAuthorizedClient("google", principal.getName());
+        String accessToken = client.getAccessToken().getTokenValue();
+
+        subscriptionSyncService.subscribeAndSyncArtist(
+                userId, accessToken, channelId, artistName
+        );
+
+        return "redirect:/artist/" + channelId;
+    }
+
+    @PostMapping("/artist/resync")
+    public String resyncArtist(
+            @AuthenticationPrincipal OAuth2User principal,
+            @RequestParam("channelId") String channelId,
+            @RequestParam("artistName") String artistName
+    ) {
+        OAuth2AuthorizedClient client =
+                clientService.loadAuthorizedClient("google", principal.getName());
+        String accessToken = client.getAccessToken().getTokenValue();
+
+        subscriptionSyncService.subscribeAndSyncArtist(
+                principal.getName(), accessToken, channelId, artistName
+        );
+
+        return "redirect:/artist/" + channelId;
+    }
+
+
+
     @PostMapping("/playlist")
     public String subscribePlaylist(
             @AuthenticationPrincipal OAuth2User principal,
@@ -67,7 +116,7 @@ public class SubscriptionController {
                 + channelId + "&playlistId=" + playlistId;
     }
 
-    //구독이 되어있으면 구독 해지하는 메서드
+    //플레이리스트 구독이 되어있으면 구독 해지하는 메서드
     @PostMapping("/playlist/toggle")
     public String togglePlaylist(
             @AuthenticationPrincipal OAuth2User principal,

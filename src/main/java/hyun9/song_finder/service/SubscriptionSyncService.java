@@ -8,5 +8,6 @@ public interface SubscriptionSyncService {
 
     void unsubscribePlaylist(String userId, String playlistId);
 
+    void unsubscribeArtist(String userId, String channelId);
 
 }

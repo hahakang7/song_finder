@@ -213,5 +213,14 @@ public class SubscriptionSyncServiceImpl implements SubscriptionSyncService {
         playlistSongRepository.deleteByUserIdAndPlaylistId(userId, playlistId);
     }
 
+    @Override
+    @Transactional
+    public void unsubscribeArtist(String userId, String channelId) {
+
+        subscribedArtistRepository.deleteByUserIdAndChannelId(userId, channelId);
+
+    }
+
+
 
 }

@@ -10,6 +10,7 @@ import hyun9.song_finder.repository.SubscribedArtistRepository;
 import hyun9.song_finder.repository.SubscribedPlaylistRepository;
 import hyun9.song_finder.service.DumpService;
 import hyun9.song_finder.service.YoutubeService;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
@@ -18,6 +19,7 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.*;
@@ -90,6 +92,46 @@ public class ArtistController {
 
         return "compare-result";
     }
+
+    @GetMapping("/artist/{channelId}")
+    public String artistPage(@AuthenticationPrincipal OAuth2User principal,
+                             @PathVariable String channelId,
+                             Model model) {
+
+        String userId = principal.getName();
+
+        Map<String, Object> channelInfo = youtubeService.fetchChannelInfo(channelId);
+        String artistName = null;
+        String thumbnailUrl = null;
+
+        if (channelInfo != null) {
+            Map<String, Object> snippet = (Map<String, Object>) channelInfo.get("snippet");
+            if (snippet != null) {
+                artistName = (String) snippet.get("title");
+                Map<String, Object> thumbnails = (Map<String, Object>) snippet.get("thumbnails");
+                if (thumbnails != null) {
+                    Map<String, Object> def = (Map<String, Object>) thumbnails.get("default");
+                    if (def != null) thumbnailUrl = (String) def.get("url");
+                }
+            }
+        }
+
+        boolean artistSubscribed =
+                subscribedArtistRepository.existsByUserIdAndChannelId(userId, channelId);
+
+        model.addAttribute("channelId", channelId);
+        model.addAttribute("artistName", artistName);
+        model.addAttribute("artistThumbnailUrl", thumbnailUrl);
+        model.addAttribute("artistSubscribed", artistSubscribed);
+
+        subscribedArtistRepository.findByUserIdAndChannelId(userId, channelId)
+                .ifPresent(a -> model.addAttribute("artistLastSyncedAt", a.getLastSyncedAt()));
+
+        return "artist-detail";
+    }
+
+
+
 
 
     /**
@@ -243,4 +285,6 @@ public class ArtistController {
 
         return items;
     }
+
+
 }

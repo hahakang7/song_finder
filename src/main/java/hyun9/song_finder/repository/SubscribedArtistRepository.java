@@ -8,5 +8,6 @@ import java.util.Optional;
 public interface SubscribedArtistRepository extends JpaRepository<SubscribedArtist, Long> {
     Optional<SubscribedArtist> findByUserIdAndChannelId(String userId, String channelId);
     boolean existsByUserIdAndChannelId(String userId, String channelId);
+    void deleteByUserIdAndChannelId(String userId, String playlistId);
 
 }
