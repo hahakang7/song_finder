@@ -26,6 +26,9 @@ public class ArtistSong {
     @Column(name = "channel_id", nullable = false, length = 100)
     private String channelId;
 
+    @Column(name = "user_id", nullable = false, length = 100)
+    private String userId;
+
     @Column(name = "normalized_title", nullable = false)
     private String normalizedTitle;
 
@@ -34,8 +37,9 @@ public class ArtistSong {
 
     protected ArtistSong() {}
 
-    public ArtistSong(String channelId, String normalizedTitle, String thumbnailUrl) {
+    public ArtistSong(String channelId,String userId, String normalizedTitle, String thumbnailUrl) {
         this.channelId = channelId;
+        this.userId = userId;
         this.normalizedTitle = normalizedTitle;
         this.thumbnailUrl = thumbnailUrl;
     }

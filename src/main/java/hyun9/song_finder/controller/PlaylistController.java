@@ -35,11 +35,6 @@ public class PlaylistController {
     private final OAuth2AuthorizedClientService clientService;
     private final SubscribedPlaylistRepository subscribedPlaylistRepository;
 
-    @GetMapping("/")
-    public String home() {
-        return "home";
-    }
-
     //
     @GetMapping("/playlists")
     public String getUserPlaylists(@AuthenticationPrincipal OAuth2User principal,

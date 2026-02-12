@@ -33,7 +33,20 @@ public class SubscriptionSyncServiceImpl implements SubscriptionSyncService {
             String playlistTitle
     ) {
 
+
+        if (playlistTitle == null || playlistTitle.isBlank()) {
+            Map<String, Object> ch = youtubeService.fetchChannelInfo(playlistId);
+            if (ch != null) {
+                Map<String, Object> snippet = (Map<String, Object>) ch.get("snippet");
+                if (snippet != null) {
+                    playlistTitle = (String) snippet.get("title");
+                }
+            }
+        }
+
+
         // 1. 구독 메타 저장 (기존 그대로)
+        String finalPlaylistTitle = playlistTitle;
         SubscribedPlaylist sub =
                 subscribedPlaylistRepository
                         .findByUserIdAndPlaylistId(userId, playlistId)
@@ -42,7 +55,7 @@ public class SubscriptionSyncServiceImpl implements SubscriptionSyncService {
                                         new SubscribedPlaylist(
                                                 userId,
                                                 playlistId,
-                                                playlistTitle
+                                                finalPlaylistTitle
                                         )
                                 )
                         );
@@ -119,7 +132,19 @@ public class SubscriptionSyncServiceImpl implements SubscriptionSyncService {
             String artistName
     ) {
 
+        if (artistName == null || artistName.isBlank()) {
+            Map<String, Object> ch = youtubeService.fetchChannelInfo(channelId);
+            if (ch != null) {
+                Map<String, Object> snippet = (Map<String, Object>) ch.get("snippet");
+                if (snippet != null) {
+                    artistName = (String) snippet.get("title");
+                }
+            }
+        }
+
+
         // 1. 아티스트 구독 메타 저장
+        String finalArtistName = artistName;
         SubscribedArtist sub =
                 subscribedArtistRepository
                         .findByUserIdAndChannelId(userId, channelId)
@@ -128,10 +153,12 @@ public class SubscriptionSyncServiceImpl implements SubscriptionSyncService {
                                         new SubscribedArtist(
                                                 userId,
                                                 channelId,
-                                                artistName
+                                                finalArtistName
                                         )
                                 )
                         );
+
+        sub.setArtistName(artistName);
 
         // 2. 아티스트 곡 영상 수집
         // (지금은 uploads 기준, Topic 전략을 쓰고 있다면 거기서 받아온 리스트)
@@ -182,12 +209,13 @@ public class SubscriptionSyncServiceImpl implements SubscriptionSyncService {
         }
 
         // 3. Replace 전략
-        artistSongRepository.deleteByChannelId(channelId);
+        artistSongRepository.deleteByChannelIdAndUserId(channelId, userId);
 
         List<ArtistSong> rows = new ArrayList<>(titleToThumb.size());
         for (Map.Entry<String, String> e : titleToThumb.entrySet()) {
             rows.add(new ArtistSong(
                     channelId,          // ❗ 항상 channelId
+                    userId,
                     e.getKey(),         // normalizedTitle
                     e.getValue()        // thumbnailUrl
             ));
@@ -218,6 +246,8 @@ public class SubscriptionSyncServiceImpl implements SubscriptionSyncService {
     public void unsubscribeArtist(String userId, String channelId) {
 
         subscribedArtistRepository.deleteByUserIdAndChannelId(userId, channelId);
+
+        artistSongRepository.deleteByChannelIdAndUserId(channelId, userId);
 
     }
 

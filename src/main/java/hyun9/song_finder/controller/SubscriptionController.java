@@ -1,5 +1,6 @@
 package hyun9.song_finder.controller;
 
+import hyun9.song_finder.repository.ArtistSongRepository;
 import hyun9.song_finder.repository.SubscribedArtistRepository;
 import hyun9.song_finder.repository.SubscribedPlaylistRepository;
 import hyun9.song_finder.service.SubscriptionSyncService;
@@ -21,6 +22,7 @@ public class SubscriptionController {
     private final SubscriptionSyncService subscriptionSyncService;
     private final SubscribedPlaylistRepository subscribedPlaylistRepository;
     private final SubscribedArtistRepository subscribedArtistRepository;
+    private final ArtistSongRepository artistSongRepository;
     private final OAuth2AuthorizedClientService clientService;
 
     @PostMapping("/artist")
@@ -60,6 +62,8 @@ public class SubscriptionController {
 
         if (subscribed) {
             subscriptionSyncService.unsubscribeArtist(userId, channelId);
+
+
             return "redirect:/artist/" + channelId;
         }
 
