@@ -12,7 +12,7 @@ import lombok.Getter;
 @Table(
         name = "playlist_song",
         uniqueConstraints = {
-                @UniqueConstraint(columnNames = {"playlist_id", "normalized_title"})
+                @UniqueConstraint(columnNames = {"user_id", "playlist_id", "normalized_title"})
         }
 )
 public class PlaylistSong {
@@ -21,22 +21,27 @@ public class PlaylistSong {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "playlist_id", nullable = false, length = 100)
+    @Column(name = "user_id", nullable = false)
+    private String userId;
+
+    @Column(name = "playlist_id", nullable = false)
     private String playlistId;
 
     @Column(name = "normalized_title", nullable = false)
     private String normalizedTitle;
 
     @Column(name = "thumbnail_url")
-    private String thumbnailUrl; // ✅ 추가
+    private String thumbnailUrl;
 
     protected PlaylistSong() {}
 
-    public PlaylistSong(String playlistId, String normalizedTitle, String thumbnailUrl) {
+    public PlaylistSong(String userId, String playlistId, String normalizedTitle, String thumbnailUrl) {
+        this.userId = userId;
         this.playlistId = playlistId;
         this.normalizedTitle = normalizedTitle;
         this.thumbnailUrl = thumbnailUrl;
     }
 }
+
 
 

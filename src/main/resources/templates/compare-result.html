@@ -50,6 +50,19 @@
 
 <h2>비교 결과</h2>
 
+<div style="margin: 8px 0; padding: 8px; background:#f5f5f5;">
+    현재 비교 모드:
+    <b th:text="${compareMode}">API</b>
+    <span th:if="${isFastMode}">(빠름)</span>
+    <span th:if="${!isFastMode}">(느림)</span>
+    <br>
+    <span th:if="${!isFastMode}">
+        구독시 비교가 더욱 빨라집니다.
+        <a th:href="@{/playlists}">플레이리스트 목록에서 구독하기</a>
+    </span>
+</div>
+
+
 <hr>
 
 <div>
@@ -58,43 +71,77 @@
     <div>
         <span>아티스트:</span>
 
+        <!-- 구독됨 -->
         <span th:if="${artistSubscribed}">
-            ✅ 구독됨
-        </span>
+        ✅ 구독됨
+        <small th:if="${artistLastSyncedAt != null}">
+            (마지막 동기화:
+            <span th:text="${#temporals.format(artistLastSyncedAt, 'yyyy-MM-dd HH:mm')}"></span>)
+        </small>
 
-        <form th:if="${!artistSubscribed}"
-              th:action="@{/subscribe/artist}"
+        <form th:action="@{/subscribe/resync/artist}"
               method="post"
               style="display:inline">
-
             <input type="hidden" name="channelId" th:value="${channelId}">
-            <input type="hidden" name="artistName" th:value="${artistName}">
             <input type="hidden" name="playlistId" th:value="${playlistId}">
+            <input type="hidden" name="artistName" th:value="${artistName}">
+            <button type="submit">재동기화</button>
+        </form>
+    </span>
 
+        <!-- 구독 안 됨 -->
+        <span th:if="${!artistSubscribed}">
+        ❌ 구독 안 됨
+
+        <form th:action="@{/subscribe/artist}"
+              method="post"
+              style="display:inline">
+            <input type="hidden" name="channelId" th:value="${channelId}">
+            <input type="hidden" name="playlistId" th:value="${playlistId}">
+            <input type="hidden" name="artistName" th:value="${artistName}">
             <button type="submit">아티스트 구독</button>
         </form>
+    </span>
     </div>
+
 
     <!-- 플레이리스트 구독 -->
     <div>
         <span>플레이리스트:</span>
 
+        <!-- 구독됨 -->
         <span th:if="${playlistSubscribed}">
-            ✅ 구독됨
-        </span>
+        ✅ 구독됨
+        <small th:if="${playlistLastSyncedAt != null}">
+            (마지막 동기화:
+            <span th:text="${#temporals.format(playlistLastSyncedAt, 'yyyy-MM-dd HH:mm')}"></span>)
+        </small>
 
-        <form th:if="${!playlistSubscribed}"
-              th:action="@{/subscribe/playlist}"
+        <form th:action="@{/subscribe/resync/playlist}"
               method="post"
               style="display:inline">
-
+            <input type="hidden" name="channelId" th:value="${channelId}">
             <input type="hidden" name="playlistId" th:value="${playlistId}">
             <input type="hidden" name="playlistTitle" th:value="${playlistTitle}">
-            <input type="hidden" name="channelId" th:value="${channelId}">
+            <button type="submit">재동기화</button>
+        </form>
+    </span>
 
+        <!-- 구독 안 됨 -->
+        <span th:if="${!playlistSubscribed}">
+        ❌ 구독 안 됨
+
+        <form th:action="@{/subscribe/playlist}"
+              method="post"
+              style="display:inline">
+            <input type="hidden" name="channelId" th:value="${channelId}">
+            <input type="hidden" name="playlistId" th:value="${playlistId}">
+            <input type="hidden" name="playlistTitle" th:value="${playlistTitle}">
             <button type="submit">플레이리스트 구독</button>
         </form>
+    </span>
     </div>
+
 
 </div>
 

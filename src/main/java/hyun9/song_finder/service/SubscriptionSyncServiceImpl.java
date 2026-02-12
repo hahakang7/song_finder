@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
@@ -84,11 +85,12 @@ public class SubscriptionSyncServiceImpl implements SubscriptionSyncService {
         }
 
         // 3. Replace 전략
-        playlistSongRepository.deleteByPlaylistId(playlistId);
+        playlistSongRepository.deleteByUserIdAndPlaylistId(userId, playlistId);
 
         List<PlaylistSong> rows = new ArrayList<>(titleToThumb.size());
         for (Map.Entry<String, String> e : titleToThumb.entrySet()) {
             rows.add(new PlaylistSong(
+                    userId,
                     playlistId,
                     e.getKey(),
                     e.getValue()
@@ -196,6 +198,20 @@ public class SubscriptionSyncServiceImpl implements SubscriptionSyncService {
         // 4. 동기화 시각 갱신
         sub.markSynced();
         subscribedArtistRepository.save(sub);
+
+
     }
+
+    @Override
+    @Transactional
+    public void unsubscribePlaylist(String userId, String playlistId) {
+
+        // 구독 메타 삭제
+        subscribedPlaylistRepository.deleteByUserIdAndPlaylistId(userId, playlistId);
+
+        // 스냅샷 삭제
+        playlistSongRepository.deleteByUserIdAndPlaylistId(userId, playlistId);
+    }
+
 
 }

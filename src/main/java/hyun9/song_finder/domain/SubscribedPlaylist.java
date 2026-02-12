@@ -1,6 +1,7 @@
 package hyun9.song_finder.domain;
 
 import jakarta.persistence.*;
+import lombok.Getter;
 
 import java.time.LocalDateTime;
 
@@ -12,6 +13,7 @@ import java.time.LocalDateTime;
  * */
 
 @Entity
+@Getter
 @Table(
         name = "subscribed_playlist",
         uniqueConstraints = {

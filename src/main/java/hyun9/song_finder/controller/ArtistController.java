@@ -59,6 +59,9 @@ public class ArtistController {
 
         List<CompareItemDTO> items;
 
+        //사용자 플리, 아티스트 둘다 구독했으면 DB모드
+        String compareMode = (artistSubscribed && playlistSubscribed) ? "DB" : "API";
+
         if (artistSubscribed && playlistSubscribed) {
             items = compareWithDb(userId, channelId, playlistId);
         } else {
@@ -67,6 +70,8 @@ public class ArtistController {
 
         model.addAttribute("items", items);
 
+        model.addAttribute("compareMode", compareMode);
+        model.addAttribute("isFastMode", "DB".equals(compareMode));
 
         model.addAttribute("channelId", channelId);
         model.addAttribute("playlistId", playlistId);
@@ -208,7 +213,7 @@ public class ArtistController {
 
         // 2) playlist title set
         Set<String> playlistTitles =
-                playlistSongRepository.findByPlaylistId(playlistId)
+                playlistSongRepository.findByUserIdAndPlaylistId(userId, playlistId)
                         .stream()
                         .map(PlaylistSong::getNormalizedTitle)
                         .collect(Collectors.toSet());
