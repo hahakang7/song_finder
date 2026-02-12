@@ -51,4 +51,7 @@ public class SubscribedArtist {
         this.lastSyncedAt = LocalDateTime.now();
     }
 
+    public void setArtistName(String artistName) {
+        this.artistName = artistName;
+    }
 }
