@@ -1,23 +1,68 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head><title>Playlists</title></head>
+<head>
+    <meta charset="UTF-8">
+    <title>Playlists</title>
+    <style>
+        li { margin-bottom: 10px; }
+        form { display: inline; }
+        button { margin-left: 6px; }
+        small { color: gray; }
+    </style>
+</head>
 <body>
+
 <h1>내 재생목록 목록</h1>
+
 <ul>
     <li th:each="pl : ${playlists}">
-        <a th:href="@{/playlist/{id}(id=${pl.id})}" th:text="${pl.snippet.title}"></a>
+
+        <!-- 기존: 상세 페이지 링크 유지 -->
+        <a th:href="@{/playlist/{id}(id=${pl.id})}"
+           th:text="${pl.snippet.title}"></a>
+
+        <!-- 구독 상태 표시 -->
+        <span th:if="${subscribedPlaylistIds.contains(pl.id)}">
+            ✅ 구독됨
+            <small th:if="${playlistLastSyncedMap[pl.id] != null}">
+                (마지막:
+                <span th:text="${#temporals.format(playlistLastSyncedMap[pl.id], 'yyyy-MM-dd HH:mm')}"></span>)
+            </small>
+        </span>
+        <span th:if="${!subscribedPlaylistIds.contains(pl.id)}">
+            ❌ 구독 안 됨
+        </span>
+
+        <!-- 구독/해지 토글 -->
+        <form th:action="@{/subscribe/playlist/toggle}" method="post">
+            <input type="hidden" name="playlistId" th:value="${pl.id}">
+            <input type="hidden" name="playlistTitle" th:value="${pl.snippet.title}">
+            <button type="submit"
+                    th:text="${subscribedPlaylistIds.contains(pl.id)} ? '구독 해지' : '구독'">
+                구독
+            </button>
+        </form>
+
+        <!-- 재동기화(구독된 경우만) -->
+        <form th:if="${subscribedPlaylistIds.contains(pl.id)}"
+              th:action="@{/subscribe/playlist/resync}" method="post">
+            <input type="hidden" name="playlistId" th:value="${pl.id}">
+            <input type="hidden" name="playlistTitle" th:value="${pl.snippet.title}">
+            <button type="submit">재동기화</button>
+        </form>
+
     </li>
 </ul>
 
+<!-- 페이지네이션 -->
 <div>
-    <a th:if="${prevPageToken}" th:href="@{/playlists(page=__prevPage__)}">이전</a>
-    <a th:if="${nextPageToken}" th:href="@{/playlists(page=__nextPage__)}">다음</a>
+    <a th:if="${prevPageToken}" th:href="@{/playlists(pageToken=${prevPageToken})}">이전</a>
+    <a th:if="${nextPageToken}" th:href="@{/playlists(pageToken=${nextPageToken})}">다음</a>
 </div>
 
-<div>
+<div style="margin-top: 20px;">
     <a href="/artist/link">아티스트 등록</a>
 </div>
-
 
 </body>
 </html>

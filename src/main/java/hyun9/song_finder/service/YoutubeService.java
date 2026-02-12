@@ -614,6 +614,22 @@ public class YoutubeService {
         return new ArrayList<>(unique.values());
     }
 
+    @SuppressWarnings("unchecked")
+    public String extractDefaultThumbnailUrl(Map<String, Object> snippet) {
+        if (snippet == null) return null;
+
+        Map<String, Object> thumbnails =
+                (Map<String, Object>) snippet.get("thumbnails");
+        if (thumbnails == null) return null;
+
+        Map<String, Object> def =
+                (Map<String, Object>) thumbnails.get("default");
+        if (def == null) return null;
+
+        Object url = def.get("url");
+        return (url instanceof String) ? (String) url : null;
+    }
+
 
 
 

@@ -1,5 +1,7 @@
 package hyun9.song_finder.controller;
 
+import hyun9.song_finder.domain.SubscribedPlaylist;
+import hyun9.song_finder.repository.SubscribedPlaylistRepository;
 import hyun9.song_finder.service.YoutubeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -17,9 +19,12 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Controller
 @RequiredArgsConstructor
@@ -28,7 +33,7 @@ public class PlaylistController {
 
     private final YoutubeService youtubeService;
     private final OAuth2AuthorizedClientService clientService;
-
+    private final SubscribedPlaylistRepository subscribedPlaylistRepository;
 
     @GetMapping("/")
     public String home() {
@@ -49,6 +54,24 @@ public class PlaylistController {
         model.addAttribute("playlists", result.get("playlists"));
         model.addAttribute("nextPageToken", result.get("nextPageToken"));
         model.addAttribute("prevPageToken", result.get("prevPageToken"));
+
+        String userId = principal.getName();
+
+        List<SubscribedPlaylist> subs = subscribedPlaylistRepository.findByUserId(userId);
+
+        Set<String> subscribedPlaylistIds =
+                subs.stream().map(SubscribedPlaylist::getPlaylistId).collect(Collectors.toSet());
+
+        Map<String, LocalDateTime> playlistLastSyncedMap =
+                subs.stream().collect(Collectors.toMap(
+                        SubscribedPlaylist::getPlaylistId,
+                        SubscribedPlaylist::getLastSyncedAt,
+                        (a, b) -> a
+                ));
+
+        model.addAttribute("subscribedPlaylistIds", subscribedPlaylistIds);
+        model.addAttribute("playlistLastSyncedMap", playlistLastSyncedMap);
+
 
         return "playlists";
     }

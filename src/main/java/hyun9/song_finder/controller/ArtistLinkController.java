@@ -41,6 +41,7 @@ public class ArtistLinkController {
         }
 
         Map<String, Object> channel = youtubeService.fetchChannelInfo(channelId);
+
         if (channel == null) {
             model.addAttribute("error", "채널 정보를 가져오지 못했습니다. 채널 ID가 맞는지 확인하세요.");
             return "channel-input";
@@ -59,8 +60,39 @@ public class ArtistLinkController {
         List<Map<String, Object>> playlists =
                 (List<Map<String, Object>>) playlistResult.get("playlists");
 
+        String artistName = null;
+        if (channel != null) {
+            Map<String, Object> snippet = (Map<String, Object>) channel.get("snippet");
+            if (snippet != null) {
+                artistName = (String) snippet.get("title");
+            }
+        }
+        model.addAttribute("artistName", artistName);
+
+        String artistThumbnailUrl = null;
+        if (channel != null) {
+            Map<String, Object> snippet = (Map<String, Object>) channel.get("snippet");
+            if (snippet != null) {
+                Map<String, Object> thumbnails = (Map<String, Object>) snippet.get("thumbnails");
+                if (thumbnails != null) {
+                    // default가 없을 수도 있으니 high/medium도 fallback
+                    Map<String, Object> thumb =
+                            (Map<String, Object>) thumbnails.getOrDefault("default",
+                                    thumbnails.getOrDefault("medium", thumbnails.get("high")));
+
+                    if (thumb != null) {
+                        artistThumbnailUrl = (String) thumb.get("url");
+                    }
+                }
+            }
+        }
+        model.addAttribute("artistThumbnailUrl", artistThumbnailUrl);
+
+
+
+
         model.addAttribute("channelId", channelId);
-        model.addAttribute("channel", channel);
+        model.addAttribute("channelInfo", channel);
         model.addAttribute("playlists", playlists);
 
         return "channel-registered";

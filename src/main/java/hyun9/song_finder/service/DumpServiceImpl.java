@@ -11,12 +11,38 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class DumpServiceImpl implements DumpService {
 
     private final DumpSongRepository dumpSongRepository;
 
-    @Override
+    @Transactional
+    public void dump(
+            String userId,
+            String channelId,
+            String normalizedTitle
+    ) {
+        if (dumpSongRepository.existsByUserIdAndChannelIdAndNormalizedTitle(
+                userId, channelId, normalizedTitle)) {
+            return; // 이미 dump된 경우 무시
+        }
+
+        dumpSongRepository.save(
+                new DumpSong(userId, channelId, normalizedTitle)
+        );
+    }
+
+    @Transactional
+    public void undo(
+            String userId,
+            String channelId,
+            String normalizedTitle
+    ) {
+        dumpSongRepository.deleteByUserIdAndChannelIdAndNormalizedTitle(
+                userId, channelId, normalizedTitle
+        );
+    }
+
+    @Transactional(readOnly = true)
     public Set<String> getDumpedTitles(String userId, String channelId) {
         return dumpSongRepository
                 .findByUserIdAndChannelId(userId, channelId)
@@ -24,25 +50,5 @@ public class DumpServiceImpl implements DumpService {
                 .map(DumpSong::getNormalizedTitle)
                 .collect(Collectors.toSet());
     }
-
-    @Override
-    @Transactional
-    public void dumpSong(String userId, String channelId, String normalizedTitle) {
-
-        // 이미 dump 되어 있으면 아무 것도 하지 않는다 (idempotent)
-        boolean exists =
-                dumpSongRepository
-                        .findByUserIdAndChannelIdAndNormalizedTitle(
-                                userId, channelId, normalizedTitle)
-                        .isPresent();
-
-        if (exists) {
-            return;
-        }
-
-        DumpSong dumpSong =
-                new DumpSong(userId, channelId, normalizedTitle);
-
-        dumpSongRepository.save(dumpSong);
-    }
 }
+
