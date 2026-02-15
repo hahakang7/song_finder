@@ -4,18 +4,25 @@
 <body>
 <div th:replace="~{fragments/header :: topHeader}"></div>
 
-<h2>Artist Detail (dummy)</h2>
-<div>
-    <img th:if="${artistThumbnailUrl != null}" th:src="${artistThumbnailUrl}" alt="thumb">
-    <b th:text="${artistName}"></b>
-    <small th:text="${channelId}"></small>
+<div th:if="${artist != null}">
+    <img th:src="${artist.avatarUrl}" width="72" height="72" alt="avatar" style="border-radius:50%;">
+    <h2 th:text="${artist.name}"></h2>
+    <p>Last Sync: <span th:text="${#temporals.format(artist.lastSyncedAt, 'yyyy-MM-dd HH:mm')}"></span></p>
+
+    <form action="/subscribe/artist/resync" method="post" data-protected="true" style="display:inline;">
+        <input type="hidden" name="artistId" th:value="${artist.id}">
+        <button type="submit">Resync</button>
+    </form>
+
+    <form action="/subscribe/artist/toggle" method="post" data-protected="true" style="display:inline;">
+        <input type="hidden" name="artistId" th:value="${artist.id}">
+        <button type="submit">Unsubscribe</button>
+    </form>
+
+    <a th:href="@{/compare/select-playlist(artistId=${artist.id})}" data-protected="true">Compare with this artist</a>
 </div>
 
-<form action="/subscribe/artist/toggle" method="post" data-protected="true" style="display:inline;">
-    <input type="hidden" name="channelId" th:value="${channelId}">
-    <button type="submit">Toggle Subscription</button>
-</form>
-<a th:href="@{/playlists(channelId=${channelId})}" data-protected="true">Go Compare</a>
+<div th:if="${artist == null}">Artist not found.</div>
 
 <div th:replace="~{fragments/auth-modal :: authModal}"></div>
 <script th:replace="~{fragments/header :: headerScript}"></script>

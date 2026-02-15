@@ -16,22 +16,12 @@ public class DumpController {
     private final AuthStateService authStateService;
 
     @PostMapping("/add")
-    public String dump(@RequestParam("channelId") String channelId,
+    public String dump(@RequestParam("artistId") String artistId,
                        @RequestParam("playlistId") String playlistId,
                        HttpSession session) {
         if (!authStateService.isAuthed(session)) {
-            return "redirect:/compare?channelId=" + channelId + "&playlistId=" + playlistId + "&loginRequired=1";
+            return "redirect:/compare/result?artistId=" + artistId + "&playlistId=" + playlistId + "&loginRequired=1";
         }
-        return "redirect:/compare?channelId=" + channelId + "&playlistId=" + playlistId;
-    }
-
-    @PostMapping("/undo")
-    public String undo(@RequestParam("channelId") String channelId,
-                       @RequestParam("playlistId") String playlistId,
-                       HttpSession session) {
-        if (!authStateService.isAuthed(session)) {
-            return "redirect:/compare?channelId=" + channelId + "&playlistId=" + playlistId + "&loginRequired=1";
-        }
-        return "redirect:/compare?channelId=" + channelId + "&playlistId=" + playlistId;
+        return "redirect:/compare/result?artistId=" + artistId + "&playlistId=" + playlistId;
     }
 }

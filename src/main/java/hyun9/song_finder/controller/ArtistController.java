@@ -1,8 +1,9 @@
 package hyun9.song_finder.controller;
 
-import hyun9.song_finder.dto.CompareItemDTO;
-import hyun9.song_finder.dto.CompareStatus;
+import hyun9.song_finder.dto.DummyArtist;
+import hyun9.song_finder.dto.DummyPlaylist;
 import hyun9.song_finder.service.AuthStateService;
+import hyun9.song_finder.service.DataContextService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
@@ -18,53 +19,61 @@ import java.util.List;
 public class ArtistController {
 
     private final AuthStateService authStateService;
+    private final DataContextService dataContextService;
 
-    @GetMapping("/compare")
-    public String compare(@RequestParam("channelId") String channelId,
-                          @RequestParam("playlistId") String playlistId,
-                          Model model,
-                          HttpSession session) {
-
+    @GetMapping({"/artist/{id}", "/artists/{id}"})
+    public String artistPage(@PathVariable String id, Model model, HttpSession session) {
         boolean isAuthed = authStateService.isAuthed(session);
         model.addAttribute("isAuthed", isAuthed);
         model.addAttribute("showLoginModal", !isAuthed);
-
-        List<CompareItemDTO> items = List.of(
-                new CompareItemDTO("Ditto", "https://placehold.co/48x48", CompareStatus.CONTAINED),
-                new CompareItemDTO("Hype Boy", "https://placehold.co/48x48", CompareStatus.MISSING),
-                new CompareItemDTO("밤편지", "https://placehold.co/48x48", CompareStatus.DUMPED)
-        );
-
-        model.addAttribute("items", items);
-        model.addAttribute("compareMode", "DUMMY");
-        model.addAttribute("isFastMode", true);
-        model.addAttribute("channelId", channelId);
-        model.addAttribute("playlistId", playlistId);
-        model.addAttribute("artistName", "Dummy Artist");
-        model.addAttribute("playlistTitle", "내 최애곡");
-        model.addAttribute("artistSubscribed", true);
-        model.addAttribute("playlistSubscribed", true);
-        model.addAttribute("dumpedCount", 1);
-        model.addAttribute("missingCount", 1);
-        model.addAttribute("containedCount", 1);
-
-        return "compare-result";
+        model.addAttribute("artist", dataContextService.findArtist(session, id).orElse(null));
+        return "artist-detail";
     }
 
-    @GetMapping("/artist/{channelId}")
-    public String artistPage(@PathVariable String channelId,
-                             Model model,
-                             HttpSession session) {
+    @GetMapping("/compare/select-playlist")
+    public String selectPlaylist(@RequestParam("artistId") String artistId,
+                                 @RequestParam(defaultValue = "1") int page,
+                                 @RequestParam(defaultValue = "4") int size,
+                                 Model model,
+                                 HttpSession session) {
         boolean isAuthed = authStateService.isAuthed(session);
         model.addAttribute("isAuthed", isAuthed);
         model.addAttribute("showLoginModal", !isAuthed);
 
-        model.addAttribute("channelId", channelId);
-        model.addAttribute("artistName", "Dummy Artist");
-        model.addAttribute("artistThumbnailUrl", "https://placehold.co/88x88");
-        model.addAttribute("artistSubscribed", true);
-        model.addAttribute("artistLastSyncedAt", "2026-02-12 14:00");
+        DummyArtist artist = dataContextService.findArtist(session, artistId).orElse(null);
+        List<DummyPlaylist> subscribed = dataContextService.getSubscribedPlaylists(session);
 
-        return "artist-detail";
+        int totalPages = Math.max(1, (int) Math.ceil((double) subscribed.size() / size));
+        int safePage = Math.max(1, Math.min(page, totalPages));
+        int from = (safePage - 1) * size;
+        int to = Math.min(from + size, subscribed.size());
+
+        model.addAttribute("artist", artist);
+        model.addAttribute("playlists", subscribed.subList(from, to));
+        model.addAttribute("currentPage", safePage);
+        model.addAttribute("totalPages", totalPages);
+
+        return "compare-select-playlist";
+    }
+
+    @GetMapping({"/compare/result", "/compare"})
+    public String compareResult(@RequestParam(value = "artistId", required = false) String artistId,
+                                @RequestParam(value = "playlistId", required = false) String playlistId,
+                                @RequestParam(value = "channelId", required = false) String channelId,
+                                Model model,
+                                HttpSession session) {
+        boolean isAuthed = authStateService.isAuthed(session);
+        model.addAttribute("isAuthed", isAuthed);
+        model.addAttribute("showLoginModal", !isAuthed);
+
+        String resolvedArtistId = artistId != null ? artistId : channelId;
+        DummyArtist artist = dataContextService.findArtist(session, resolvedArtistId).orElse(null);
+        DummyPlaylist playlist = dataContextService.findPlaylist(session, playlistId).orElse(null);
+
+        model.addAttribute("artist", artist);
+        model.addAttribute("playlist", playlist);
+        model.addAttribute("missingTracks", dataContextService.getMissingTracks(resolvedArtistId, playlistId));
+
+        return "compare-result";
     }
 }

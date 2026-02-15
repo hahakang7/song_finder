@@ -4,11 +4,11 @@
 <body>
 <div th:replace="~{fragments/header :: topHeader}"></div>
 
-<h2>Register Artist (dummy)</h2>
+<h2>Register Artist</h2>
 <form th:action="@{/artists/register}" method="post" data-protected="true">
-    <label for="channelUrl">Artist Channel URL</label>
-    <input id="channelUrl" name="channelUrl" type="text" required>
-    <button type="submit">Check</button>
+    <label for="channelUrl">Paste artist channel URL</label>
+    <input id="channelUrl" name="channelUrl" type="text" size="70" required>
+    <button type="submit">Register</button>
 </form>
 <p th:if="${error}" th:text="${error}" style="color:red;"></p>
 

@@ -1,24 +1,33 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head><meta charset="UTF-8"><title>Compare Result</title></head>
+<head><meta charset="UTF-8"><title>Comparison Result</title></head>
 <body>
 <div th:replace="~{fragments/header :: topHeader}"></div>
 
-<h2>Compare Result (dummy)</h2>
-<p><b th:text="${artistName}"></b> vs <b th:text="${playlistTitle}"></b></p>
+<h2>Step 2: Comparison Result</h2>
+<div>
+    <b th:text="${artist != null ? artist.name : 'Unknown Artist'}"></b>
+    vs
+    <b th:text="${playlist != null ? playlist.title : 'Unknown Playlist'}"></b>
+</div>
 
+<h3>Tracks missing from playlist</h3>
 <ul>
-    <li th:each="item : ${items}">
-        <img th:src="${item.thumbnailUrl}" alt="thumb">
-        <span th:text="${item.normalizedTitle}"></span>
-        <b th:text="${item.status}"></b>
-        <form th:if="${item.status.name() == 'MISSING'}" action="/dump/add" method="post" data-protected="true" style="display:inline;">
-            <input type="hidden" name="channelId" th:value="${channelId}">
-            <input type="hidden" name="playlistId" th:value="${playlistId}">
+    <li th:each="track : ${missingTracks}">
+        <span th:text="${track.title}"></span>
+        <small th:text="' - ' + ${track.artistName} + ' (' + ${track.durationSec} + 's)'"></small>
+        <form action="/dump/add" method="post" data-protected="true" style="display:inline;">
+            <input type="hidden" name="artistId" th:value="${artist != null ? artist.id : ''}">
+            <input type="hidden" name="playlistId" th:value="${playlist != null ? playlist.id : ''}">
             <button type="submit">Dump</button>
         </form>
     </li>
 </ul>
+
+<div style="margin-top:12px;">
+    <a th:href="@{/compare/select-playlist(artistId=${artist != null ? artist.id : ''})}" data-protected="true">Re-select</a>
+    <a href="/artists" data-protected="true" style="margin-left:10px;">Back</a>
+</div>
 
 <div th:replace="~{fragments/auth-modal :: authModal}"></div>
 <script th:replace="~{fragments/header :: headerScript}"></script>

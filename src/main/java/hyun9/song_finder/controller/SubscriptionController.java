@@ -1,6 +1,7 @@
 package hyun9.song_finder.controller;
 
 import hyun9.song_finder.service.AuthStateService;
+import hyun9.song_finder.service.DataContextService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
@@ -14,70 +15,41 @@ import org.springframework.web.bind.annotation.RequestParam;
 public class SubscriptionController {
 
     private final AuthStateService authStateService;
-
-    @PostMapping("/artist")
-    public String subscribeArtist(@RequestParam("channelId") String channelId,
-                                  @RequestParam("playlistId") String playlistId,
-                                  HttpSession session) {
-        if (!authStateService.isAuthed(session)) {
-            return "redirect:/compare?channelId=" + channelId + "&playlistId=" + playlistId + "&loginRequired=1";
-        }
-        return "redirect:/compare?channelId=" + channelId + "&playlistId=" + playlistId;
-    }
+    private final DataContextService dataContextService;
 
     @PostMapping("/artist/toggle")
-    public String toggleArtist(@RequestParam("channelId") String channelId,
-                               HttpSession session) {
+    public String toggleArtist(@RequestParam("artistId") String artistId, HttpSession session) {
         if (!authStateService.isAuthed(session)) {
-            return "redirect:/artist/" + channelId + "?loginRequired=1";
+            return "redirect:/artists?loginRequired=1";
         }
-        return "redirect:/artist/" + channelId;
+        dataContextService.unsubscribeArtist(session, artistId);
+        return "redirect:/artists";
     }
 
     @PostMapping("/artist/resync")
-    public String resyncArtist(@RequestParam("channelId") String channelId,
-                               HttpSession session) {
+    public String resyncArtist(@RequestParam("artistId") String artistId, HttpSession session) {
         if (!authStateService.isAuthed(session)) {
-            return "redirect:/artist/" + channelId + "?loginRequired=1";
+            return "redirect:/artists?loginRequired=1";
         }
-        return "redirect:/artist/" + channelId;
-    }
-
-    @PostMapping("/playlist")
-    public String subscribePlaylist(@RequestParam("playlistId") String playlistId,
-                                    @RequestParam("channelId") String channelId,
-                                    HttpSession session) {
-        if (!authStateService.isAuthed(session)) {
-            return "redirect:/compare?channelId=" + channelId + "&playlistId=" + playlistId + "&loginRequired=1";
-        }
-        return "redirect:/compare?channelId=" + channelId + "&playlistId=" + playlistId;
+        dataContextService.resyncArtist(session, artistId);
+        return "redirect:/artists";
     }
 
     @PostMapping("/playlist/toggle")
-    public String togglePlaylist(HttpSession session) {
+    public String togglePlaylist(@RequestParam("playlistId") String playlistId, HttpSession session) {
         if (!authStateService.isAuthed(session)) {
             return "redirect:/playlists?loginRequired=1";
         }
+        dataContextService.togglePlaylistSubscription(session, playlistId);
         return "redirect:/playlists";
     }
 
-    @PostMapping("/resync/artist")
-    public String resyncArtistFromCompare(@RequestParam("channelId") String channelId,
-                                          @RequestParam("playlistId") String playlistId,
-                                          HttpSession session) {
+    @PostMapping("/playlist/resync")
+    public String resyncPlaylist(@RequestParam("playlistId") String playlistId, HttpSession session) {
         if (!authStateService.isAuthed(session)) {
-            return "redirect:/compare?channelId=" + channelId + "&playlistId=" + playlistId + "&loginRequired=1";
+            return "redirect:/playlists?loginRequired=1";
         }
-        return "redirect:/compare?channelId=" + channelId + "&playlistId=" + playlistId;
-    }
-
-    @PostMapping("/resync/playlist")
-    public String resyncPlaylistFromCompare(@RequestParam("channelId") String channelId,
-                                            @RequestParam("playlistId") String playlistId,
-                                            HttpSession session) {
-        if (!authStateService.isAuthed(session)) {
-            return "redirect:/compare?channelId=" + channelId + "&playlistId=" + playlistId + "&loginRequired=1";
-        }
-        return "redirect:/compare?channelId=" + channelId + "&playlistId=" + playlistId;
+        dataContextService.resyncPlaylist(session, playlistId);
+        return "redirect:/playlists";
     }
 }

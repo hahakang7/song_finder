@@ -4,10 +4,22 @@
 <body>
 <div th:replace="~{fragments/header :: topHeader}"></div>
 
-<h2>Playlist Detail (dummy)</h2>
-<ul>
-    <li th:each="item : ${playlistItems}" th:text="${item.title}"></li>
-</ul>
+<div th:if="${playlist != null}">
+    <h2 th:text="${playlist.title}"></h2>
+    <img th:src="${playlist.thumbnailUrl}" width="80" height="80" alt="thumb"/>
+    <p>Last Sync: <span th:text="${#temporals.format(playlist.lastSyncedAt, 'yyyy-MM-dd HH:mm')}"></span></p>
+    <ul>
+        <li th:each="track : ${playlist.tracks}">
+            <span th:text="${track.title} + ' - ' + ${track.artistName}"></span>
+        </li>
+    </ul>
+    <form action="/subscribe/playlist/resync" method="post" data-protected="true">
+        <input type="hidden" name="playlistId" th:value="${playlist.id}">
+        <button type="submit">Resync</button>
+    </form>
+</div>
+
+<div th:if="${playlist == null}">Playlist not found.</div>
 
 <div th:replace="~{fragments/auth-modal :: authModal}"></div>
 <script th:replace="~{fragments/header :: headerScript}"></script>

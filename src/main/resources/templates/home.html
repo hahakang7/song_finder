@@ -1,32 +1,75 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head><meta charset="UTF-8"><title>Song Finder - Home</title></head>
+<head>
+    <meta charset="UTF-8">
+    <title>Song Finder - Home</title>
+    <style>
+        .grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+        .card { border:1px solid #ddd; padding:12px; border-radius:8px; }
+        .item { border-bottom:1px solid #eee; padding:10px 0; }
+        .item:last-child { border-bottom:none; }
+        .row { display:flex; align-items:center; gap:10px; }
+        .thumb { width:52px; height:52px; border-radius:8px; object-fit:cover; }
+    </style>
+</head>
 <body>
 <div th:replace="~{fragments/header :: topHeader}"></div>
 
-<h2>Home</h2>
-<p th:text="${isAuthed} ? 'Logged in' : 'Guest mode'"></p>
+<div class="grid">
+    <section class="card">
+        <h3>Subscribed Artists</h3>
+        <div th:each="artist : ${subscribedArtists}" class="item">
+            <div class="row">
+                <img class="thumb" th:src="${artist.avatarUrl}" alt="artist"/>
+                <div>
+                    <div><b th:text="${artist.name}">Artist</b></div>
+                    <small th:text="${#temporals.format(artist.lastSyncedAt, 'yyyy-MM-dd HH:mm')}"></small>
+                </div>
+            </div>
+            <div style="margin-top:8px;">
+                <a th:href="@{/artists/{id}(id=${artist.id})}" data-protected="true">Manage</a>
+                <a th:href="@{/compare/select-playlist(artistId=${artist.id})}" data-protected="true" style="margin-left:8px;">Compare with this artist</a>
+            </div>
+        </div>
+    </section>
 
-<h3>Subscribed Artists (dummy)</h3>
-<ul>
-    <li th:each="a : ${subscribedArtists}">
-        <b th:text="${a.artistName}"></b>
-        <small th:text="' (' + ${a.lastSyncedAt} + ')'" style="color:gray;"></small>
-        <a th:href="@{/artist/{channelId}(channelId=${a.channelId})}" data-protected="true">Detail</a>
-    </li>
-</ul>
-
-<h3>Subscribed Playlists (dummy)</h3>
-<ul>
-    <li th:each="p : ${subscribedPlaylists}">
-        <b th:text="${p.playlistTitle}"></b>
-        <small th:text="' (' + ${p.lastSyncedAt} + ')'" style="color:gray;"></small>
-        <a th:href="@{/playlist/{id}(id=${p.playlistId})}" data-protected="true">Detail</a>
-    </li>
-</ul>
+    <section class="card">
+        <h3>Subscribed Playlists</h3>
+        <div th:each="pl : ${subscribedPlaylists}" class="item">
+            <div class="row">
+                <img class="thumb" th:src="${pl.thumbnailUrl}" alt="playlist"/>
+                <div>
+                    <div><b th:text="${pl.title}">Playlist</b></div>
+                </div>
+            </div>
+            <details style="margin-top:8px;">
+                <summary>Detail</summary>
+                <div style="padding:8px 0;">
+                    <div>Last Sync: <b th:text="${#temporals.format(pl.lastSyncedAt, 'yyyy-MM-dd HH:mm')}"></b></div>
+                    <ul>
+                        <li th:each="t : ${pl.tracks}" th:text="${t.title} + ' - ' + ${t.artistName}"></li>
+                    </ul>
+                    <form action="/subscribe/playlist/resync" method="post" data-protected="true" class="resync-form">
+                        <input type="hidden" name="playlistId" th:value="${pl.id}">
+                        <button type="submit">Resync</button>
+                        <span class="loading" style="display:none; margin-left:6px;">Loading...</span>
+                    </form>
+                </div>
+            </details>
+        </div>
+    </section>
+</div>
 
 <div th:replace="~{fragments/auth-modal :: authModal}"></div>
 <script th:replace="~{fragments/header :: headerScript}"></script>
 <script th:replace="~{fragments/auth-modal :: authScript}"></script>
+<script>
+    document.querySelectorAll('.resync-form').forEach(form => {
+        form.addEventListener('submit', () => {
+            const loading = form.querySelector('.loading');
+            if (loading) loading.style.display = 'inline';
+        });
+    });
+</script>
 </body>
 </html>

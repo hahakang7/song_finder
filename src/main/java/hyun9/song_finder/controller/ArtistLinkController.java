@@ -1,6 +1,7 @@
 package hyun9.song_finder.controller;
 
 import hyun9.song_finder.service.AuthStateService;
+import hyun9.song_finder.service.DataContextService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
@@ -9,14 +10,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import java.util.List;
-import java.util.Map;
-
 @Controller
 @RequiredArgsConstructor
 public class ArtistLinkController {
 
     private final AuthStateService authStateService;
+    private final DataContextService dataContextService;
 
     @GetMapping({"/artist/link", "/artists/register"})
     public String showChannelInput(Model model, HttpSession session) {
@@ -35,19 +34,16 @@ public class ArtistLinkController {
 
         if (!isAuthed) {
             model.addAttribute("showLoginModal", true);
-            model.addAttribute("error", "로그인 후 아티스트를 등록할 수 있습니다.");
             return "channel-input";
         }
 
-        model.addAttribute("channelId", "artist-from-link");
-        model.addAttribute("artistName", "Dummy Artist");
-        model.addAttribute("artistThumbnailUrl", "https://placehold.co/88x88");
-        model.addAttribute("channelInfo", Map.of("channelUrl", channelUrl));
-        model.addAttribute("playlists", List.of(
-                Map.of("id", "pl-favorite", "title", "내 최애곡"),
-                Map.of("id", "pl-drive", "title", "드라이브 노래")
-        ));
+        if (!dataContextService.passesDummyArtistValidation(channelUrl)) {
+            model.addAttribute("showLoginModal", false);
+            model.addAttribute("error", "해당 아티스트를 찾을 수 없습니다!");
+            return "channel-input";
+        }
 
-        return "channel-registered";
+        dataContextService.registerArtist(session, channelUrl);
+        return "redirect:/artists";
     }
 }
