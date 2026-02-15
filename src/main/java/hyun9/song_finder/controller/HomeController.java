@@ -2,6 +2,11 @@ package hyun9.song_finder.controller;
 
 import hyun9.song_finder.service.AuthStateService;
 import jakarta.servlet.http.HttpSession;
+import hyun9.song_finder.domain.SubscribedArtist;
+import hyun9.song_finder.domain.SubscribedPlaylist;
+import hyun9.song_finder.repository.SubscribedArtistRepository;
+import hyun9.song_finder.repository.SubscribedPlaylistRepository;
+import hyun9.song_finder.service.DummyAuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -15,6 +20,9 @@ import java.util.Map;
 public class HomeController {
 
     private final AuthStateService authStateService;
+    private final SubscribedArtistRepository subscribedArtistRepository;
+    private final SubscribedPlaylistRepository subscribedPlaylistRepository;
+    private final DummyAuthService dummyAuthService;
 
     @GetMapping("/")
     public String home(Model model, HttpSession session) {
@@ -24,6 +32,12 @@ public class HomeController {
         model.addAttribute("subscribedArtists", List.of(
                 Map.of("artistName", "IU", "channelId", "artist-iu", "lastSyncedAt", "2026-02-10 09:30"),
                 Map.of("artistName", "NewJeans", "channelId", "artist-newjeans", "lastSyncedAt", "2026-02-12 14:00")
+        String userId = dummyAuthService.resolveUserId(principal);
+
+        List<SubscribedArtist> artists = subscribedArtistRepository.findByUserId(userId);
+        artists.sort(Comparator.comparing(
+                SubscribedArtist::getLastSyncedAt,
+                Comparator.nullsLast(Comparator.reverseOrder())
         ));
 
         model.addAttribute("subscribedPlaylists", List.of(

@@ -2,6 +2,11 @@ package hyun9.song_finder.controller;
 
 import hyun9.song_finder.service.AuthStateService;
 import jakarta.servlet.http.HttpSession;
+import hyun9.song_finder.domain.SubscribedArtist;
+import hyun9.song_finder.domain.SubscribedPlaylist;
+import hyun9.song_finder.repository.SubscribedArtistRepository;
+import hyun9.song_finder.repository.SubscribedPlaylistRepository;
+import hyun9.song_finder.service.DummyAuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -30,6 +35,20 @@ public class SubscriptionsController {
                 Map.of("playlistTitle", "내 최애곡", "playlistId", "pl-favorite", "lastSyncedAt", "2026-02-13 21:10"),
                 Map.of("playlistTitle", "드라이브 노래", "playlistId", "pl-drive", "lastSyncedAt", "2026-02-09 18:20")
         ));
+    private final SubscribedArtistRepository subscribedArtistRepository;
+    private final SubscribedPlaylistRepository subscribedPlaylistRepository;
+    private final DummyAuthService dummyAuthService;
+
+    @GetMapping("/subscriptions")
+    public String subscriptions(@AuthenticationPrincipal OAuth2User principal, Model model) {
+
+        String userId = dummyAuthService.resolveUserId(principal);
+
+        List<SubscribedArtist> artists = subscribedArtistRepository.findByUserId(userId);
+        List<SubscribedPlaylist> playlists = subscribedPlaylistRepository.findByUserId(userId);
+
+        model.addAttribute("subscribedArtists", artists);
+        model.addAttribute("subscribedPlaylists", playlists);
 
         return "subscriptions";
     }
