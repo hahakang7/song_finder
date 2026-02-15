@@ -1,40 +1,36 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head><meta charset="UTF-8"><title>Subscribed Artist Management</title></head>
+<head><meta charset="UTF-8"><title>구독목록 관리</title></head>
 <body>
-<div th:replace="~{fragments/header :: topHeader}"></div>
+<h2>구독목록 관리 (더미)</h2>
+<a href="/">홈</a>
 
-<h2>Subscribed Artist Management</h2>
-<a href="/artists/register" data-protected="true">Register Artist</a>
-
+<h3>가수 구독</h3>
 <ul>
-    <li th:each="artist : ${artists}" style="margin:12px 0;">
-        <img th:src="${artist.avatarUrl}" alt="avatar" width="42" height="42" style="vertical-align:middle; border-radius:50%;">
-        <b th:text="${artist.name}"></b>
-        <small th:text="${#temporals.format(artist.lastSyncedAt, 'yyyy-MM-dd HH:mm')}"></small>
-
-        <form action="/subscribe/artist/resync" method="post" data-protected="true" style="display:inline;">
-            <input type="hidden" name="artistId" th:value="${artist.id}">
-            <button type="submit">Resync</button>
-        </form>
-
+    <li th:each="a : ${subscribedArtists}">
+        <b th:text="${a.artistName}"></b>
+        <small th:text="' (' + ${a.lastSyncedAt} + ')'" style="color:gray"></small>
+        <a th:href="@{/artist/{channelId}(channelId=${a.channelId})}" data-protected="true">관리</a>
         <form action="/subscribe/artist/toggle" method="post" data-protected="true" style="display:inline;">
-            <input type="hidden" name="artistId" th:value="${artist.id}">
-            <button type="submit">Unsubscribe</button>
+            <input type="hidden" name="channelId" th:value="${a.channelId}">
+            <button type="submit">구독 해지</button>
         </form>
-
-        <a th:href="@{/artists/{id}(id=${artist.id})}" data-protected="true">Manage</a>
     </li>
 </ul>
 
-<div style="margin-top:12px;">
-    <a th:if="${currentPage > 1}" th:href="@{/artists(page=${currentPage-1})}" data-protected="true">Prev</a>
-    <span th:text="${currentPage} + ' / ' + ${totalPages}"></span>
-    <a th:if="${currentPage < totalPages}" th:href="@{/artists(page=${currentPage+1})}" data-protected="true">Next</a>
-</div>
+<h3>재생목록 구독</h3>
+<ul>
+    <li th:each="p : ${subscribedPlaylists}">
+        <b th:text="${p.playlistTitle}"></b>
+        <small th:text="' (' + ${p.lastSyncedAt} + ')'" style="color:gray"></small>
+        <a th:href="@{/playlist/{id}(id=${p.playlistId})}" data-protected="true">보기</a>
+        <form action="/subscribe/playlist/toggle" method="post" data-protected="true" style="display:inline;">
+            <button type="submit">구독 해지</button>
+        </form>
+    </li>
+</ul>
 
 <div th:replace="~{fragments/auth-modal :: authModal}"></div>
-<script th:replace="~{fragments/header :: headerScript}"></script>
 <script th:replace="~{fragments/auth-modal :: authScript}"></script>
 </body>
 </html>
