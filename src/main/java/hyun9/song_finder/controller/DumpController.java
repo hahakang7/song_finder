@@ -1,6 +1,5 @@
 package hyun9.song_finder.controller;
 
-import hyun9.song_finder.service.DummyAuthService;
 import hyun9.song_finder.service.DumpService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -16,7 +15,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 public class DumpController {
 
     private final DumpService dumpService;
-    private final DummyAuthService dummyAuthService;
 
     @PostMapping("/add")
     public String dump(
@@ -25,7 +23,7 @@ public class DumpController {
             @RequestParam("playlistId") String playlistId,
             @RequestParam("title") String normalizedTitle
     ) {
-        String userId = dummyAuthService.resolveUserId(principal);
+        String userId = principal.getName();
 
         dumpService.dump(userId, channelId, normalizedTitle);
 
@@ -40,7 +38,7 @@ public class DumpController {
             @RequestParam("playlistId") String playlistId,
             @RequestParam("title") String normalizedTitle
     ) {
-        String userId = dummyAuthService.resolveUserId(principal);
+        String userId = principal.getName();
 
         dumpService.undo(userId, channelId, normalizedTitle);
 
@@ -48,3 +46,4 @@ public class DumpController {
                 + channelId + "&playlistId=" + playlistId;
     }
 }
+
