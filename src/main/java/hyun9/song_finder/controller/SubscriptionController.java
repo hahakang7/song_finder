@@ -1,13 +1,11 @@
 package hyun9.song_finder.controller;
 
-import hyun9.song_finder.repository.ArtistSongRepository;
 import hyun9.song_finder.repository.SubscribedArtistRepository;
 import hyun9.song_finder.repository.SubscribedPlaylistRepository;
+import hyun9.song_finder.service.DummyAuthService;
 import hyun9.song_finder.service.SubscriptionSyncService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,8 +20,7 @@ public class SubscriptionController {
     private final SubscriptionSyncService subscriptionSyncService;
     private final SubscribedPlaylistRepository subscribedPlaylistRepository;
     private final SubscribedArtistRepository subscribedArtistRepository;
-    private final ArtistSongRepository artistSongRepository;
-    private final OAuth2AuthorizedClientService clientService;
+    private final DummyAuthService dummyAuthService;
 
     @PostMapping("/artist")
     public String subscribeArtist(
@@ -33,12 +30,11 @@ public class SubscriptionController {
             @RequestParam("playlistId") String playlistId
     ) {
 
-        OAuth2AuthorizedClient client =
-                clientService.loadAuthorizedClient("google", principal.getName());
-        String accessToken = client.getAccessToken().getTokenValue();
+        String userId = dummyAuthService.resolveUserId(principal);
+        String accessToken = dummyAuthService.resolveAccessToken(principal);
 
         subscriptionSyncService.subscribeAndSyncArtist(
-                principal.getName(),
+                userId,
                 accessToken,
                 channelId,
                 artistName
@@ -48,28 +44,23 @@ public class SubscriptionController {
                 + channelId + "&playlistId=" + playlistId;
     }
 
-    //아티스트 구독이 되어있으면 구독 해지하는 메서드
     @PostMapping("/artist/toggle")
     public String toggleArtist(
             @AuthenticationPrincipal OAuth2User principal,
             @RequestParam("channelId") String channelId,
             @RequestParam("artistName") String artistName
     ) {
-        String userId = principal.getName();
+        String userId = dummyAuthService.resolveUserId(principal);
 
         boolean subscribed =
                 subscribedArtistRepository.existsByUserIdAndChannelId(userId, channelId);
 
         if (subscribed) {
             subscriptionSyncService.unsubscribeArtist(userId, channelId);
-
-
             return "redirect:/artist/" + channelId;
         }
 
-        OAuth2AuthorizedClient client =
-                clientService.loadAuthorizedClient("google", principal.getName());
-        String accessToken = client.getAccessToken().getTokenValue();
+        String accessToken = dummyAuthService.resolveAccessToken(principal);
 
         subscriptionSyncService.subscribeAndSyncArtist(
                 userId, accessToken, channelId, artistName
@@ -84,12 +75,11 @@ public class SubscriptionController {
             @RequestParam("channelId") String channelId,
             @RequestParam("artistName") String artistName
     ) {
-        OAuth2AuthorizedClient client =
-                clientService.loadAuthorizedClient("google", principal.getName());
-        String accessToken = client.getAccessToken().getTokenValue();
+        String userId = dummyAuthService.resolveUserId(principal);
+        String accessToken = dummyAuthService.resolveAccessToken(principal);
 
         subscriptionSyncService.subscribeAndSyncArtist(
-                principal.getName(), accessToken, channelId, artistName
+                userId, accessToken, channelId, artistName
         );
 
         return "redirect:/artist/" + channelId;
@@ -105,12 +95,11 @@ public class SubscriptionController {
             @RequestParam("channelId") String channelId
     ) {
 
-        OAuth2AuthorizedClient client =
-                clientService.loadAuthorizedClient("google", principal.getName());
-        String accessToken = client.getAccessToken().getTokenValue();
+        String userId = dummyAuthService.resolveUserId(principal);
+        String accessToken = dummyAuthService.resolveAccessToken(principal);
 
         subscriptionSyncService.subscribeAndSyncPlaylist(
-                principal.getName(),
+                userId,
                 accessToken,
                 playlistId,
                 playlistTitle
@@ -120,14 +109,13 @@ public class SubscriptionController {
                 + channelId + "&playlistId=" + playlistId;
     }
 
-    //플레이리스트 구독이 되어있으면 구독 해지하는 메서드
     @PostMapping("/playlist/toggle")
     public String togglePlaylist(
             @AuthenticationPrincipal OAuth2User principal,
             @RequestParam("playlistId") String playlistId,
             @RequestParam("playlistTitle") String playlistTitle
     ) {
-        String userId = principal.getName();
+        String userId = dummyAuthService.resolveUserId(principal);
 
         boolean subscribed =
                 subscribedPlaylistRepository.existsByUserIdAndPlaylistId(userId, playlistId);
@@ -137,9 +125,7 @@ public class SubscriptionController {
             return "redirect:/playlists";
         }
 
-        OAuth2AuthorizedClient client =
-                clientService.loadAuthorizedClient("google", principal.getName());
-        String accessToken = client.getAccessToken().getTokenValue();
+        String accessToken = dummyAuthService.resolveAccessToken(principal);
 
         subscriptionSyncService.subscribeAndSyncPlaylist(
                 userId, accessToken, playlistId, playlistTitle
@@ -150,7 +136,6 @@ public class SubscriptionController {
 
 
 
-    //artist 재동기화
     @PostMapping("/resync/artist")
     public String resyncArtist(
             @AuthenticationPrincipal OAuth2User principal,
@@ -159,12 +144,11 @@ public class SubscriptionController {
             @RequestParam("artistName") String artistName
     ) {
 
-        OAuth2AuthorizedClient client =
-                clientService.loadAuthorizedClient("google", principal.getName());
-        String accessToken = client.getAccessToken().getTokenValue();
+        String userId = dummyAuthService.resolveUserId(principal);
+        String accessToken = dummyAuthService.resolveAccessToken(principal);
 
         subscriptionSyncService.subscribeAndSyncArtist(
-                principal.getName(),
+                userId,
                 accessToken,
                 channelId,
                 artistName
@@ -173,7 +157,6 @@ public class SubscriptionController {
         return "redirect:/compare?channelId=" + channelId + "&playlistId=" + playlistId;
     }
 
-    //playlist 재동기화
     @PostMapping("/resync/playlist")
     public String resyncPlaylist(
             @AuthenticationPrincipal OAuth2User principal,
@@ -182,12 +165,11 @@ public class SubscriptionController {
             @RequestParam("playlistTitle") String playlistTitle
     ) {
 
-        OAuth2AuthorizedClient client =
-                clientService.loadAuthorizedClient("google", principal.getName());
-        String accessToken = client.getAccessToken().getTokenValue();
+        String userId = dummyAuthService.resolveUserId(principal);
+        String accessToken = dummyAuthService.resolveAccessToken(principal);
 
         subscriptionSyncService.subscribeAndSyncPlaylist(
-                principal.getName(),
+                userId,
                 accessToken,
                 playlistId,
                 playlistTitle
@@ -198,6 +180,3 @@ public class SubscriptionController {
 
 
 }
-
-
-

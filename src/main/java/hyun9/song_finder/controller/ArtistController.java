@@ -8,13 +8,11 @@ import hyun9.song_finder.repository.ArtistSongRepository;
 import hyun9.song_finder.repository.PlaylistSongRepository;
 import hyun9.song_finder.repository.SubscribedArtistRepository;
 import hyun9.song_finder.repository.SubscribedPlaylistRepository;
+import hyun9.song_finder.service.DummyAuthService;
 import hyun9.song_finder.service.DumpService;
 import hyun9.song_finder.service.YoutubeService;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -31,7 +29,7 @@ public class ArtistController {
 
     private final YoutubeService youtubeService;
     private final DumpService dumpService;
-    private final OAuth2AuthorizedClientService clientService;
+    private final DummyAuthService dummyAuthService;
 
     private final SubscribedArtistRepository subscribedArtistRepository;
     private final SubscribedPlaylistRepository subscribedPlaylistRepository;
@@ -51,7 +49,7 @@ public class ArtistController {
             Model model
     ) {
 
-        String userId = principal.getName();
+        String userId = dummyAuthService.resolveUserId(principal);
 
         boolean artistSubscribed =
                 subscribedArtistRepository.existsByUserIdAndChannelId(userId, channelId);
@@ -98,7 +96,7 @@ public class ArtistController {
                              @PathVariable String channelId,
                              Model model) {
 
-        String userId = principal.getName();
+        String userId = dummyAuthService.resolveUserId(principal);
 
         Map<String, Object> channelInfo = youtubeService.fetchChannelInfo(channelId);
         String artistName = null;
@@ -146,9 +144,7 @@ public class ArtistController {
             String playlistId
     ) {
 
-        OAuth2AuthorizedClient client =
-                clientService.loadAuthorizedClient("google", principal.getName());
-        String accessToken = client.getAccessToken().getTokenValue();
+        String accessToken = dummyAuthService.resolveAccessToken(principal);
 
         // 1) 아티스트 영상 수집
         String uploadsPlaylistId =

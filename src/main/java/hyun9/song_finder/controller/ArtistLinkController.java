@@ -1,10 +1,9 @@
 package hyun9.song_finder.controller;
 
+import hyun9.song_finder.service.DummyAuthService;
 import hyun9.song_finder.service.YoutubeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -20,15 +19,13 @@ import java.util.Map;
 public class ArtistLinkController {
 
     private final YoutubeService youtubeService;
-    private final OAuth2AuthorizedClientService clientService;
+    private final DummyAuthService dummyAuthService;
 
-    // 채널 URL 입력 페이지
     @GetMapping("/artist/link")
     public String showChannelInput() {
         return "channel-input";
     }
 
-    // 채널 URL 제출 → 채널 정보 확인 + 플레이리스트 목록 보여주기
     @PostMapping("/artist/link")
     public String handleChannelLink(@RequestParam("channelUrl") String channelUrl,
                                     @AuthenticationPrincipal OAuth2User principal,
@@ -47,12 +44,8 @@ public class ArtistLinkController {
             return "channel-input";
         }
 
-        // 로그인 사용자 access token
-        OAuth2AuthorizedClient client =
-                clientService.loadAuthorizedClient("google", principal.getName());
-        String accessToken = client.getAccessToken().getTokenValue();
+        String accessToken = dummyAuthService.resolveAccessToken(principal);
 
-        // 내 플레이리스트 1페이지(5개)만 우선 보여주기 (필요하면 페이지네이션으로 확장)
         Map<String, Object> playlistResult =
                 youtubeService.getPaginatedPlaylists(accessToken, null);
 
@@ -61,35 +54,26 @@ public class ArtistLinkController {
                 (List<Map<String, Object>>) playlistResult.get("playlists");
 
         String artistName = null;
-        if (channel != null) {
-            Map<String, Object> snippet = (Map<String, Object>) channel.get("snippet");
-            if (snippet != null) {
-                artistName = (String) snippet.get("title");
-            }
+        Map<String, Object> snippet = (Map<String, Object>) channel.get("snippet");
+        if (snippet != null) {
+            artistName = (String) snippet.get("title");
         }
         model.addAttribute("artistName", artistName);
 
         String artistThumbnailUrl = null;
-        if (channel != null) {
-            Map<String, Object> snippet = (Map<String, Object>) channel.get("snippet");
-            if (snippet != null) {
-                Map<String, Object> thumbnails = (Map<String, Object>) snippet.get("thumbnails");
-                if (thumbnails != null) {
-                    // default가 없을 수도 있으니 high/medium도 fallback
-                    Map<String, Object> thumb =
-                            (Map<String, Object>) thumbnails.getOrDefault("default",
-                                    thumbnails.getOrDefault("medium", thumbnails.get("high")));
+        if (snippet != null) {
+            Map<String, Object> thumbnails = (Map<String, Object>) snippet.get("thumbnails");
+            if (thumbnails != null) {
+                Map<String, Object> thumb =
+                        (Map<String, Object>) thumbnails.getOrDefault("default",
+                                thumbnails.getOrDefault("medium", thumbnails.get("high")));
 
-                    if (thumb != null) {
-                        artistThumbnailUrl = (String) thumb.get("url");
-                    }
+                if (thumb != null) {
+                    artistThumbnailUrl = (String) thumb.get("url");
                 }
             }
         }
         model.addAttribute("artistThumbnailUrl", artistThumbnailUrl);
-
-
-
 
         model.addAttribute("channelId", channelId);
         model.addAttribute("channelInfo", channel);

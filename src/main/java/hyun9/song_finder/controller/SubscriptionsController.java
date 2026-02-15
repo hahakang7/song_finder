@@ -4,6 +4,7 @@ import hyun9.song_finder.domain.SubscribedArtist;
 import hyun9.song_finder.domain.SubscribedPlaylist;
 import hyun9.song_finder.repository.SubscribedArtistRepository;
 import hyun9.song_finder.repository.SubscribedPlaylistRepository;
+import hyun9.song_finder.service.DummyAuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.user.OAuth2User;
@@ -19,13 +20,12 @@ public class SubscriptionsController {
 
     private final SubscribedArtistRepository subscribedArtistRepository;
     private final SubscribedPlaylistRepository subscribedPlaylistRepository;
+    private final DummyAuthService dummyAuthService;
 
     @GetMapping("/subscriptions")
     public String subscriptions(@AuthenticationPrincipal OAuth2User principal, Model model) {
 
-        if (principal == null) return "redirect:/oauth2/authorization/google";
-
-        String userId = principal.getName();
+        String userId = dummyAuthService.resolveUserId(principal);
 
         List<SubscribedArtist> artists = subscribedArtistRepository.findByUserId(userId);
         List<SubscribedPlaylist> playlists = subscribedPlaylistRepository.findByUserId(userId);

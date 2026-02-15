@@ -2,15 +2,14 @@ package hyun9.song_finder.controller;
 
 import hyun9.song_finder.domain.SubscribedPlaylist;
 import hyun9.song_finder.repository.SubscribedPlaylistRepository;
+import hyun9.song_finder.service.DummyAuthService;
 import hyun9.song_finder.service.YoutubeService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -32,25 +31,22 @@ public class PlaylistController {
 
 
     private final YoutubeService youtubeService;
-    private final OAuth2AuthorizedClientService clientService;
+    private final DummyAuthService dummyAuthService;
     private final SubscribedPlaylistRepository subscribedPlaylistRepository;
 
-    //
     @GetMapping("/playlists")
     public String getUserPlaylists(@AuthenticationPrincipal OAuth2User principal,
                                    @RequestParam(required = false) String pageToken,
                                    Model model) {
 
-        OAuth2AuthorizedClient client = clientService.loadAuthorizedClient("google", principal.getName());
-        String accessToken = client.getAccessToken().getTokenValue();
+        String accessToken = dummyAuthService.resolveAccessToken(principal);
 
-        // String pageToken을 그대로 넘긴다
         Map<String, Object> result = youtubeService.getPaginatedPlaylists(accessToken, pageToken);
         model.addAttribute("playlists", result.get("playlists"));
         model.addAttribute("nextPageToken", result.get("nextPageToken"));
         model.addAttribute("prevPageToken", result.get("prevPageToken"));
 
-        String userId = principal.getName();
+        String userId = dummyAuthService.resolveUserId(principal);
 
         List<SubscribedPlaylist> subs = subscribedPlaylistRepository.findByUserId(userId);
 
@@ -73,7 +69,6 @@ public class PlaylistController {
 
 
 
-    //
     public Map<String, Object> fetchPlaylistsFromYouTube(String accessToken, String pageToken) {
         String baseUrl = "https://www.googleapis.com/youtube/v3/playlists?part=snippet&mine=true&maxResults=5";
         if (pageToken != null && !pageToken.isEmpty()) {
@@ -98,16 +93,13 @@ public class PlaylistController {
     }
 
 
-    //플레이리스트 들어가면 내용
     @GetMapping("/playlist/{id}")
     public String getPlaylistItems(@AuthenticationPrincipal OAuth2User principal,
                                    @PathVariable String id,
                                    @RequestParam(defaultValue = "") String pageToken,
                                    Model model) {
-        OAuth2AuthorizedClient client = clientService.loadAuthorizedClient("google", principal.getName());
-        String accessToken = client.getAccessToken().getTokenValue();
+        String accessToken = dummyAuthService.resolveAccessToken(principal);
 
-        // 특정 플레이리스트의 영상 목록 페이지네이션
         Map<String, Object> result = youtubeService.getPlaylistItems(accessToken, id, pageToken);
         model.addAttribute("playlistItems", result.get("items"));
         model.addAttribute("nextPageToken", result.get("nextPageToken"));
@@ -132,4 +124,3 @@ public class PlaylistController {
 
 
 }
-
