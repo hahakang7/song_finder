@@ -1,26 +1,27 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head><meta charset="UTF-8"><title>Artist Registered</title></head>
+<head><meta charset="UTF-8"><title>채널 등록 완료</title></head>
 <body>
-<div th:replace="~{fragments/header :: topHeader}"></div>
+<h2>아티스트 등록 완료 (더미)</h2>
+<a href="/">홈</a>
 
-<h2>Artist Registered (dummy)</h2>
-<div>
+<div style="border:1px solid #ddd; padding:10px; margin-top:10px;">
     <img th:if="${artistThumbnailUrl != null}" th:src="${artistThumbnailUrl}" alt="thumb">
     <b th:text="${artistName}"></b>
-    <small th:text="${channelId}"></small>
+    <small th:text="'(channelId: ' + ${channelId} + ')'" style="color:gray;"></small>
+    <div><a th:href="@{/artist/{channelId}(channelId=${channelId})}" data-protected="true">아티스트 상세로 이동</a></div>
 </div>
 
+<h3>비교할 플레이리스트 선택</h3>
 <form action="/compare" method="get" data-protected="true">
     <input type="hidden" name="channelId" th:value="${channelId}">
     <select name="playlistId" required>
         <option th:each="pl : ${playlists}" th:value="${pl.id}" th:text="${pl.title}"></option>
     </select>
-    <button type="submit">Compare</button>
+    <button type="submit">비교하기</button>
 </form>
 
 <div th:replace="~{fragments/auth-modal :: authModal}"></div>
-<script th:replace="~{fragments/header :: headerScript}"></script>
 <script th:replace="~{fragments/auth-modal :: authScript}"></script>
 </body>
 </html>
