@@ -1,5 +1,11 @@
 package hyun9.song_finder.controller;
 
+import hyun9.song_finder.dto.DummyArtist;
+import hyun9.song_finder.dto.DummyPlaylist;
+import hyun9.song_finder.service.AuthStateService;
+import hyun9.song_finder.service.DataContextService;
+import jakarta.servlet.http.HttpSession;
+import lombok.RequiredArgsConstructor;
 import hyun9.song_finder.dto.CompareItemDTO;
 import hyun9.song_finder.dto.CompareStatus;
 import hyun9.song_finder.service.AuthStateService;
@@ -28,250 +34,61 @@ import java.util.List;
 public class ArtistController {
 
     private final AuthStateService authStateService;
-    private final YoutubeService youtubeService;
-    private final DumpService dumpService;
-    private final DummyAuthService dummyAuthService;
+    private final DataContextService dataContextService;
 
-    @GetMapping("/compare")
-    public String compare(@RequestParam("channelId") String channelId,
-                          @RequestParam("playlistId") String playlistId,
-                          Model model,
-                          HttpSession session) {
-    public String compare(
-            @AuthenticationPrincipal OAuth2User principal,
-            @RequestParam("channelId") String channelId,
-            @RequestParam("playlistId") String playlistId,
-            Model model
-    ) {
-
-        String userId = dummyAuthService.resolveUserId(principal);
-
-        boolean artistSubscribed =
-                subscribedArtistRepository.existsByUserIdAndChannelId(userId, channelId);
-
-        boolean playlistSubscribed =
-                subscribedPlaylistRepository.existsByUserIdAndPlaylistId(userId, playlistId);
-
+    @GetMapping({"/artist/{id}", "/artists/{id}"})
+    public String artistPage(@PathVariable String id, Model model, HttpSession session) {
         boolean isAuthed = authStateService.isAuthed(session);
         model.addAttribute("isAuthed", isAuthed);
         model.addAttribute("showLoginModal", !isAuthed);
-
-        List<CompareItemDTO> items = List.of(
-                new CompareItemDTO("Ditto", "https://placehold.co/48x48", CompareStatus.CONTAINED),
-                new CompareItemDTO("Hype Boy", "https://placehold.co/48x48", CompareStatus.MISSING),
-                new CompareItemDTO("밤편지", "https://placehold.co/48x48", CompareStatus.DUMPED)
-        );
-
-        model.addAttribute("items", items);
-        model.addAttribute("compareMode", "DUMMY");
-        model.addAttribute("isFastMode", true);
-        model.addAttribute("channelId", channelId);
-        model.addAttribute("playlistId", playlistId);
-        model.addAttribute("artistName", "Dummy Artist");
-        model.addAttribute("playlistTitle", "내 최애곡");
-        model.addAttribute("artistSubscribed", true);
-        model.addAttribute("playlistSubscribed", true);
-        model.addAttribute("dumpedCount", 1);
-        model.addAttribute("missingCount", 1);
-        model.addAttribute("containedCount", 1);
-
-        return "compare-result";
-    }
-
-    @GetMapping("/artist/{channelId}")
-    public String artistPage(@PathVariable String channelId,
-                             Model model,
-                             HttpSession session) {
-        boolean isAuthed = authStateService.isAuthed(session);
-        model.addAttribute("isAuthed", isAuthed);
-        model.addAttribute("showLoginModal", !isAuthed);
-    public String artistPage(@AuthenticationPrincipal OAuth2User principal,
-                             @PathVariable String channelId,
-                             Model model) {
-
-        String userId = dummyAuthService.resolveUserId(principal);
-
-        Map<String, Object> channelInfo = youtubeService.fetchChannelInfo(channelId);
-        String artistName = null;
-        String thumbnailUrl = null;
-
-        if (channelInfo != null) {
-            Map<String, Object> snippet = (Map<String, Object>) channelInfo.get("snippet");
-            if (snippet != null) {
-                artistName = (String) snippet.get("title");
-                Map<String, Object> thumbnails = (Map<String, Object>) snippet.get("thumbnails");
-                if (thumbnails != null) {
-                    Map<String, Object> def = (Map<String, Object>) thumbnails.get("default");
-                    if (def != null) thumbnailUrl = (String) def.get("url");
-                }
-            }
-        }
-
-        boolean artistSubscribed =
-                subscribedArtistRepository.existsByUserIdAndChannelId(userId, channelId);
-
-        model.addAttribute("channelId", channelId);
-        model.addAttribute("artistName", "Dummy Artist");
-        model.addAttribute("artistThumbnailUrl", "https://placehold.co/88x88");
-        model.addAttribute("artistSubscribed", true);
-        model.addAttribute("artistLastSyncedAt", "2026-02-12 14:00");
-
+        model.addAttribute("artist", dataContextService.findArtist(session, id).orElse(null));
         return "artist-detail";
     }
 
+    @GetMapping("/compare/select-playlist")
+    public String selectPlaylist(@RequestParam("artistId") String artistId,
+                                 @RequestParam(defaultValue = "1") int page,
+                                 @RequestParam(defaultValue = "4") int size,
+                                 Model model,
+                                 HttpSession session) {
+        boolean isAuthed = authStateService.isAuthed(session);
+        model.addAttribute("isAuthed", isAuthed);
+        model.addAttribute("showLoginModal", !isAuthed);
 
+        DummyArtist artist = dataContextService.findArtist(session, artistId).orElse(null);
+        List<DummyPlaylist> subscribed = dataContextService.getSubscribedPlaylists(session);
 
+        int totalPages = Math.max(1, (int) Math.ceil((double) subscribed.size() / size));
+        int safePage = Math.max(1, Math.min(page, totalPages));
+        int from = (safePage - 1) * size;
+        int to = Math.min(from + size, subscribed.size());
 
+        model.addAttribute("artist", artist);
+        model.addAttribute("playlists", subscribed.subList(from, to));
+        model.addAttribute("currentPage", safePage);
+        model.addAttribute("totalPages", totalPages);
 
-    /**
-     * ===============================
-     * API 기반 Cold Compare (기존 로직)
-     * ===============================
-     */
-    private List<CompareItemDTO> compareWithApi(
-            OAuth2User principal,
-            String userId,
-            String channelId,
-            String playlistId
-    ) {
-
-        String accessToken = dummyAuthService.resolveAccessToken(principal);
-
-        // 1) 아티스트 영상 수집
-        String uploadsPlaylistId =
-                youtubeService.getUploadsPlaylistId(channelId);
-
-        Set<String> artistVideoIds =
-                youtubeService.getAllVideoIdsInPlaylist(accessToken, uploadsPlaylistId);
-
-        List<Map<String, Object>> artistVideosDetailed =
-                youtubeService.getVideosByIdsWithDetails(
-                        accessToken,
-                        new ArrayList<>(artistVideoIds)
-                );
-
-        List<Map<String, Object>> artistSongs =
-                youtubeService.filterLikelySongs(artistVideosDetailed);
-
-        // 2) 플레이리스트 title set
-        Set<String> playlistVideoIds =
-                youtubeService.getAllVideoIdsInPlaylist(accessToken, playlistId);
-
-        List<Map<String, Object>> playlistVideos =
-                youtubeService.getVideosByIdsWithDetails(
-                        accessToken,
-                        new ArrayList<>(playlistVideoIds)
-                );
-
-        Set<String> playlistTitles = new HashSet<>();
-        for (Map<String, Object> v : playlistVideos) {
-            Map<String, Object> snippet = (Map<String, Object>) v.get("snippet");
-            if (snippet == null) continue;
-
-            String rawTitle = (String) snippet.get("title");
-            String channelTitle = (String) snippet.get("channelTitle");
-
-            String normalized =
-                    youtubeService.normalizeSongTitle(rawTitle, channelTitle);
-
-            if (!normalized.isBlank()) {
-                playlistTitles.add(normalized);
-            }
-        }
-
-        Set<String> dumpedTitles =
-                dumpService.getDumpedTitles(userId, channelId);
-
-        // 3) artist songs → DTO
-        Map<String, String> artistMap = new LinkedHashMap<>();
-
-        for (Map<String, Object> v : artistSongs) {
-            Map<String, Object> snippet = (Map<String, Object>) v.get("snippet");
-            if (snippet == null) continue;
-
-            String rawTitle = (String) snippet.get("title");
-            String channelTitle = (String) snippet.get("channelTitle");
-
-            String normalized =
-                    youtubeService.normalizeSongTitle(rawTitle, channelTitle);
-            if (normalized.isBlank()) continue;
-
-            String thumb =
-                    youtubeService.extractDefaultThumbnailUrl(snippet);
-
-            artistMap.putIfAbsent(normalized, thumb);
-        }
-
-        List<CompareItemDTO> items = new ArrayList<>(artistMap.size());
-
-        for (Map.Entry<String, String> e : artistMap.entrySet()) {
-            String title = e.getKey();
-            String thumb = e.getValue();
-
-            CompareStatus status;
-            if (dumpedTitles.contains(title)) {
-                status = CompareStatus.DUMPED;
-            } else if (playlistTitles.contains(title)) {
-                status = CompareStatus.CONTAINED;
-            } else {
-                status = CompareStatus.MISSING;
-            }
-
-            items.add(new CompareItemDTO(title, thumb, status));
-        }
-
-        return items;
+        return "compare-select-playlist";
     }
 
+    @GetMapping({"/compare/result", "/compare"})
+    public String compareResult(@RequestParam(value = "artistId", required = false) String artistId,
+                                @RequestParam(value = "playlistId", required = false) String playlistId,
+                                @RequestParam(value = "channelId", required = false) String channelId,
+                                Model model,
+                                HttpSession session) {
+        boolean isAuthed = authStateService.isAuthed(session);
+        model.addAttribute("isAuthed", isAuthed);
+        model.addAttribute("showLoginModal", !isAuthed);
 
-    private List<CompareItemDTO> compareWithDb(
-            String userId,
-            String channelId,
-            String playlistId
-    ) {
+        String resolvedArtistId = artistId != null ? artistId : channelId;
+        DummyArtist artist = dataContextService.findArtist(session, resolvedArtistId).orElse(null);
+        DummyPlaylist playlist = dataContextService.findPlaylist(session, playlistId).orElse(null);
 
-        // 1) artist: normalizedTitle -> thumbnailUrl
-        Map<String, String> artistMap =
-                artistSongRepository.findByChannelId(channelId)
-                        .stream()
-                        .collect(Collectors.toMap(
-                                ArtistSong::getNormalizedTitle,
-                                ArtistSong::getThumbnailUrl,
-                                (a, b) -> a
-                        ));
+        model.addAttribute("artist", artist);
+        model.addAttribute("playlist", playlist);
+        model.addAttribute("missingTracks", dataContextService.getMissingTracks(resolvedArtistId, playlistId));
 
-        // 2) playlist title set
-        Set<String> playlistTitles =
-                playlistSongRepository.findByUserIdAndPlaylistId(userId, playlistId)
-                        .stream()
-                        .map(PlaylistSong::getNormalizedTitle)
-                        .collect(Collectors.toSet());
-
-        // 3) dump set
-        Set<String> dumpedTitles =
-                dumpService.getDumpedTitles(userId, channelId);
-
-        // 4) 조립
-        List<CompareItemDTO> items = new ArrayList<>(artistMap.size());
-
-        for (Map.Entry<String, String> e : artistMap.entrySet()) {
-            String title = e.getKey();
-            String thumb = e.getValue();
-
-            CompareStatus status;
-            if (dumpedTitles.contains(title)) {
-                status = CompareStatus.DUMPED;
-            } else if (playlistTitles.contains(title)) {
-                status = CompareStatus.CONTAINED;
-            } else {
-                status = CompareStatus.MISSING;
-            }
-
-            items.add(new CompareItemDTO(title, thumb, status));
-        }
-
-        return items;
+        return "compare-result";
     }
-
-
 }

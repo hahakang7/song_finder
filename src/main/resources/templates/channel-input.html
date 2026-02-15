@@ -1,18 +1,19 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head><meta charset="UTF-8"><title>채널 등록</title></head>
+<head><meta charset="UTF-8"><title>Register Artist</title></head>
 <body>
-<h2>아티스트 등록 (더미)</h2>
-<a href="/">홈</a>
+<div th:replace="~{fragments/header :: topHeader}"></div>
 
-<form th:action="@{/artist/link}" method="post" data-protected="true" style="margin-top:12px;">
-    <label for="channelUrl">채널 URL</label>
-    <input id="channelUrl" name="channelUrl" type="text" size="60" placeholder="https://youtube.com/@artist" required>
-    <button type="submit">확인</button>
+<h2>Register Artist</h2>
+<form th:action="@{/artists/register}" method="post" data-protected="true">
+    <label for="channelUrl">Paste artist channel URL</label>
+    <input id="channelUrl" name="channelUrl" type="text" size="70" required>
+    <button type="submit">Register</button>
 </form>
 <p th:if="${error}" th:text="${error}" style="color:red;"></p>
 
 <div th:replace="~{fragments/auth-modal :: authModal}"></div>
+<script th:replace="~{fragments/header :: headerScript}"></script>
 <script th:replace="~{fragments/auth-modal :: authScript}"></script>
 </body>
 </html>

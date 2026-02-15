@@ -1,30 +1,48 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head><meta charset="UTF-8"><title>Playlists</title></head>
+<head><meta charset="UTF-8"><title>Playlist Management</title></head>
 <body>
-<h2>재생목록 관리 (더미)</h2>
-<a href="/">홈</a>
+<div th:replace="~{fragments/header :: topHeader}"></div>
 
-<div th:if="${selectedChannelId != null}" style="margin-top:8px; color:#555;">
-    선택된 아티스트: <span th:text="${selectedChannelId}"></span>
-</div>
+<h2>Playlist Management</h2>
 
 <ul>
-    <li th:each="pl : ${playlists}">
-        <a th:href="@{/playlist/{id}(id=${pl.id})}" data-protected="true" th:text="${pl.title}"></a>
-        <span th:text="${pl.subscribed} ? '✅ 구독됨' : '❌ 구독 안 됨'" style="margin-left:6px;"></span>
-        <small th:text="'(' + ${pl.lastSyncedAt} + ')'" style="color:gray;"></small>
+    <li th:each="pl : ${playlists}" style="margin:14px 0;">
+        <img th:src="${pl.thumbnailUrl}" width="44" height="44" alt="thumb" style="vertical-align:middle;">
+        <b th:text="${pl.title}"></b>
+        <small th:text="${#temporals.format(pl.lastSyncedAt, 'yyyy-MM-dd HH:mm')}"></small>
+
         <form action="/subscribe/playlist/toggle" method="post" data-protected="true" style="display:inline;">
             <input type="hidden" name="playlistId" th:value="${pl.id}">
-            <button type="submit" th:text="${pl.subscribed} ? '구독 해지' : '구독'"></button>
+            <button type="submit" th:text="${pl.subscribed} ? 'Unsubscribe' : 'Subscribe'"></button>
         </form>
-        <a th:if="${selectedChannelId != null}" th:href="@{/compare(channelId=${selectedChannelId},playlistId=${pl.id})}" data-protected="true">비교</a>
+
+        <form th:if="${pl.subscribed}" action="/subscribe/playlist/resync" method="post" data-protected="true" style="display:inline;" class="resync-form">
+            <input type="hidden" name="playlistId" th:value="${pl.id}">
+            <button type="submit">Resync</button>
+            <span class="loading" style="display:none;">Loading...</span>
+        </form>
+
+        <a th:href="@{/playlist/{id}(id=${pl.id})}" data-protected="true">Detail</a>
     </li>
 </ul>
 
-<a href="/artist/link" data-protected="true">아티스트 등록</a>
+<div style="margin-top:12px;">
+    <a th:if="${currentPage > 1}" th:href="@{/playlists(page=${currentPage-1})}" data-protected="true">Prev</a>
+    <span th:text="${currentPage} + ' / ' + ${totalPages}"></span>
+    <a th:if="${currentPage < totalPages}" th:href="@{/playlists(page=${currentPage+1})}" data-protected="true">Next</a>
+</div>
 
 <div th:replace="~{fragments/auth-modal :: authModal}"></div>
+<script th:replace="~{fragments/header :: headerScript}"></script>
 <script th:replace="~{fragments/auth-modal :: authScript}"></script>
+<script>
+    document.querySelectorAll('.resync-form').forEach(form => {
+        form.addEventListener('submit', () => {
+            const loading = form.querySelector('.loading');
+            if (loading) loading.style.display = 'inline';
+        });
+    });
+</script>
 </body>
 </html>

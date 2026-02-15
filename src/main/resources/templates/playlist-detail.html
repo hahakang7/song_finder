@@ -2,16 +2,27 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head><meta charset="UTF-8"><title>Playlist Detail</title></head>
 <body>
-<h2>플레이리스트 상세 (더미)</h2>
-<a href="/playlists" data-protected="true">목록으로 돌아가기</a>
+<div th:replace="~{fragments/header :: topHeader}"></div>
 
-<ul>
-    <li th:each="item : ${playlistItems}">
-        <span th:text="${item.title}"></span>
-    </li>
-</ul>
+<div th:if="${playlist != null}">
+    <h2 th:text="${playlist.title}"></h2>
+    <img th:src="${playlist.thumbnailUrl}" width="80" height="80" alt="thumb"/>
+    <p>Last Sync: <span th:text="${#temporals.format(playlist.lastSyncedAt, 'yyyy-MM-dd HH:mm')}"></span></p>
+    <ul>
+        <li th:each="track : ${playlist.tracks}">
+            <span th:text="${track.title} + ' - ' + ${track.artistName}"></span>
+        </li>
+    </ul>
+    <form action="/subscribe/playlist/resync" method="post" data-protected="true">
+        <input type="hidden" name="playlistId" th:value="${playlist.id}">
+        <button type="submit">Resync</button>
+    </form>
+</div>
+
+<div th:if="${playlist == null}">Playlist not found.</div>
 
 <div th:replace="~{fragments/auth-modal :: authModal}"></div>
+<script th:replace="~{fragments/header :: headerScript}"></script>
 <script th:replace="~{fragments/auth-modal :: authScript}"></script>
 </body>
 </html>
