@@ -1,8 +1,5 @@
 package hyun9.song_finder.controller;
 
-import hyun9.song_finder.service.AuthStateService;
-import jakarta.servlet.http.HttpSession;
-import lombok.RequiredArgsConstructor;
 import hyun9.song_finder.service.DummyAuthService;
 import hyun9.song_finder.service.YoutubeService;
 import lombok.RequiredArgsConstructor;
@@ -21,39 +18,32 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ArtistLinkController {
 
-    private final AuthStateService authStateService;
     private final YoutubeService youtubeService;
     private final DummyAuthService dummyAuthService;
 
     @GetMapping("/artist/link")
-    public String showChannelInput(Model model, HttpSession session) {
-        boolean isAuthed = authStateService.isAuthed(session);
-        model.addAttribute("isAuthed", isAuthed);
-        model.addAttribute("showLoginModal", !isAuthed);
+    public String showChannelInput() {
         return "channel-input";
     }
 
     @PostMapping("/artist/link")
     public String handleChannelLink(@RequestParam("channelUrl") String channelUrl,
-                                    Model model,
-                                    HttpSession session) {
-        boolean isAuthed = authStateService.isAuthed(session);
-        model.addAttribute("isAuthed", isAuthed);
+                                    @AuthenticationPrincipal OAuth2User principal,
+                                    Model model) {
 
-        if (!isAuthed) {
-            model.addAttribute("showLoginModal", true);
-            model.addAttribute("error", "로그인 후 아티스트를 등록할 수 있습니다.");
+        String channelId = youtubeService.extractChannelId(channelUrl);
+        if (channelId == null) {
+            model.addAttribute("error", "채널 URL에서 채널 ID를 추출하지 못했습니다.");
             return "channel-input";
         }
 
-        model.addAttribute("channelId", "artist-from-link");
-        model.addAttribute("artistName", "Dummy Artist");
-        model.addAttribute("artistThumbnailUrl", "https://placehold.co/88x88");
-        model.addAttribute("channelInfo", Map.of("channelUrl", channelUrl));
-        model.addAttribute("playlists", List.of(
-                Map.of("id", "pl-favorite", "title", "내 최애곡"),
-                Map.of("id", "pl-drive", "title", "드라이브 노래")
-        ));
+        Map<String, Object> channel = youtubeService.fetchChannelInfo(channelId);
+
+        if (channel == null) {
+            model.addAttribute("error", "채널 정보를 가져오지 못했습니다. 채널 ID가 맞는지 확인하세요.");
+            return "channel-input";
+        }
+
         String accessToken = dummyAuthService.resolveAccessToken(principal);
 
         Map<String, Object> playlistResult =

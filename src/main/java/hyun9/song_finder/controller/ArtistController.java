@@ -1,10 +1,9 @@
 package hyun9.song_finder.controller;
 
+import hyun9.song_finder.domain.ArtistSong;
+import hyun9.song_finder.domain.PlaylistSong;
 import hyun9.song_finder.dto.CompareItemDTO;
 import hyun9.song_finder.dto.CompareStatus;
-import hyun9.song_finder.service.AuthStateService;
-import jakarta.servlet.http.HttpSession;
-import lombok.RequiredArgsConstructor;
 import hyun9.song_finder.repository.ArtistSongRepository;
 import hyun9.song_finder.repository.PlaylistSongRepository;
 import hyun9.song_finder.repository.SubscribedArtistRepository;
@@ -21,22 +20,28 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Controller
 @RequiredArgsConstructor
 public class ArtistController {
 
-    private final AuthStateService authStateService;
     private final YoutubeService youtubeService;
     private final DumpService dumpService;
     private final DummyAuthService dummyAuthService;
 
+    private final SubscribedArtistRepository subscribedArtistRepository;
+    private final SubscribedPlaylistRepository subscribedPlaylistRepository;
+    private final ArtistSongRepository artistSongRepository;
+    private final PlaylistSongRepository playlistSongRepository;
+
+    /**
+     * compare 진입점
+     * - DB에 구독 데이터 있으면 DB compare
+     * - 없으면 API compare
+     */
     @GetMapping("/compare")
-    public String compare(@RequestParam("channelId") String channelId,
-                          @RequestParam("playlistId") String playlistId,
-                          Model model,
-                          HttpSession session) {
     public String compare(
             @AuthenticationPrincipal OAuth2User principal,
             @RequestParam("channelId") String channelId,
@@ -52,39 +57,41 @@ public class ArtistController {
         boolean playlistSubscribed =
                 subscribedPlaylistRepository.existsByUserIdAndPlaylistId(userId, playlistId);
 
-        boolean isAuthed = authStateService.isAuthed(session);
-        model.addAttribute("isAuthed", isAuthed);
-        model.addAttribute("showLoginModal", !isAuthed);
+        List<CompareItemDTO> items;
 
-        List<CompareItemDTO> items = List.of(
-                new CompareItemDTO("Ditto", "https://placehold.co/48x48", CompareStatus.CONTAINED),
-                new CompareItemDTO("Hype Boy", "https://placehold.co/48x48", CompareStatus.MISSING),
-                new CompareItemDTO("밤편지", "https://placehold.co/48x48", CompareStatus.DUMPED)
-        );
+        //사용자 플리, 아티스트 둘다 구독했으면 DB모드
+        String compareMode = (artistSubscribed && playlistSubscribed) ? "DB" : "API";
+
+        if (artistSubscribed && playlistSubscribed) {
+            items = compareWithDb(userId, channelId, playlistId);
+        } else {
+            items = compareWithApi(principal, userId, channelId, playlistId);
+        }
 
         model.addAttribute("items", items);
-        model.addAttribute("compareMode", "DUMMY");
-        model.addAttribute("isFastMode", true);
+
+        model.addAttribute("compareMode", compareMode);
+        model.addAttribute("isFastMode", "DB".equals(compareMode));
+
         model.addAttribute("channelId", channelId);
         model.addAttribute("playlistId", playlistId);
-        model.addAttribute("artistName", "Dummy Artist");
-        model.addAttribute("playlistTitle", "내 최애곡");
-        model.addAttribute("artistSubscribed", true);
-        model.addAttribute("playlistSubscribed", true);
-        model.addAttribute("dumpedCount", 1);
-        model.addAttribute("missingCount", 1);
-        model.addAttribute("containedCount", 1);
+
+        model.addAttribute("artistSubscribed", artistSubscribed);
+        model.addAttribute("playlistSubscribed", playlistSubscribed);
+
+
+        // (선택) 카운트
+        model.addAttribute("dumpedCount",
+                items.stream().filter(i -> i.getStatus() == CompareStatus.DUMPED).count());
+        model.addAttribute("missingCount",
+                items.stream().filter(i -> i.getStatus() == CompareStatus.MISSING).count());
+        model.addAttribute("containedCount",
+                items.stream().filter(i -> i.getStatus() == CompareStatus.CONTAINED).count());
 
         return "compare-result";
     }
 
     @GetMapping("/artist/{channelId}")
-    public String artistPage(@PathVariable String channelId,
-                             Model model,
-                             HttpSession session) {
-        boolean isAuthed = authStateService.isAuthed(session);
-        model.addAttribute("isAuthed", isAuthed);
-        model.addAttribute("showLoginModal", !isAuthed);
     public String artistPage(@AuthenticationPrincipal OAuth2User principal,
                              @PathVariable String channelId,
                              Model model) {
@@ -111,10 +118,12 @@ public class ArtistController {
                 subscribedArtistRepository.existsByUserIdAndChannelId(userId, channelId);
 
         model.addAttribute("channelId", channelId);
-        model.addAttribute("artistName", "Dummy Artist");
-        model.addAttribute("artistThumbnailUrl", "https://placehold.co/88x88");
-        model.addAttribute("artistSubscribed", true);
-        model.addAttribute("artistLastSyncedAt", "2026-02-12 14:00");
+        model.addAttribute("artistName", artistName);
+        model.addAttribute("artistThumbnailUrl", thumbnailUrl);
+        model.addAttribute("artistSubscribed", artistSubscribed);
+
+        subscribedArtistRepository.findByUserIdAndChannelId(userId, channelId)
+                .ifPresent(a -> model.addAttribute("artistLastSyncedAt", a.getLastSyncedAt()));
 
         return "artist-detail";
     }

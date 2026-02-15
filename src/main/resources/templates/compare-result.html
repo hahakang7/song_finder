@@ -1,57 +1,234 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head><meta charset="UTF-8"><title>비교 결과</title></head>
-<body>
-<h2>비교 결과 (더미)</h2>
-<a href="/">홈</a>
+<head>
+    <meta charset="UTF-8">
+    <title>비교 결과</title>
 
-<p>모드: <b th:text="${compareMode}"></b></p>
-<p>
-    제외됨: <b th:text="${dumpedCount}"></b> /
-    없는 곡: <b th:text="${missingCount}"></b> /
-    포함됨: <b th:text="${containedCount}"></b>
-</p>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            display: flex;
+            gap: 40px;
+        }
+
+        .column {
+            width: 33%;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        li {
+            margin-bottom: 10px;
+        }
+
+        img {
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+
+        form {
+            display: inline;
+        }
+
+        button {
+            margin-left: 8px;
+        }
+
+        .dumped {
+            color: gray;
+            text-decoration: line-through;
+        }
+    </style>
+</head>
+<body>
+
+<h2>비교 결과</h2>
+
+<div style="margin: 8px 0; padding: 8px; background:#f5f5f5;">
+    현재 비교 모드:
+    <b th:text="${compareMode}">API</b>
+    <span th:if="${isFastMode}">(빠름)</span>
+    <span th:if="${!isFastMode}">(느림)</span>
+    <br>
+    <span th:if="${!isFastMode}">
+        구독시 비교가 더욱 빨라집니다.
+        <a th:href="@{/playlists}">플레이리스트 목록에서 구독하기</a>
+    </span>
+</div>
+
+
+<hr>
 
 <div>
-    <span>아티스트: <b th:text="${artistName}"></b></span>
-    <form action="/subscribe/resync/artist" method="post" data-protected="true" style="display:inline;">
-        <input type="hidden" name="channelId" th:value="${channelId}">
-        <input type="hidden" name="playlistId" th:value="${playlistId}">
-        <button type="submit">아티스트 재동기화</button>
-    </form>
-</div>
 
-<div style="margin-top:8px;">
-    <span>플레이리스트: <b th:text="${playlistTitle}"></b></span>
-    <form action="/subscribe/resync/playlist" method="post" data-protected="true" style="display:inline;">
-        <input type="hidden" name="channelId" th:value="${channelId}">
-        <input type="hidden" name="playlistId" th:value="${playlistId}">
-        <button type="submit">플레이리스트 재동기화</button>
-    </form>
-</div>
+    <!-- 아티스트 구독 -->
+    <div>
+        <span>아티스트:</span>
 
-<h3>곡 목록</h3>
-<ul>
-    <li th:each="item : ${items}">
-        <img th:src="${item.thumbnailUrl}" alt="thumb">
-        <b th:text="${item.normalizedTitle}"></b>
-        <span th:text="${item.status}"></span>
-        <form th:if="${item.status.name() == 'MISSING'}" action="/dump/add" method="post" data-protected="true" style="display:inline;">
+        <!-- 구독됨 -->
+        <span th:if="${artistSubscribed}">
+        ✅ 구독됨
+        <small th:if="${artistLastSyncedAt != null}">
+            (마지막 동기화:
+            <span th:text="${#temporals.format(artistLastSyncedAt, 'yyyy-MM-dd HH:mm')}"></span>)
+        </small>
+
+        <form th:action="@{/subscribe/resync/artist}"
+              method="post"
+              style="display:inline">
             <input type="hidden" name="channelId" th:value="${channelId}">
             <input type="hidden" name="playlistId" th:value="${playlistId}">
-            <button type="submit">제외</button>
+            <input type="hidden" name="artistName" th:value="${artistName}">
+            <button type="submit">재동기화</button>
         </form>
-        <form th:if="${item.status.name() == 'DUMPED'}" action="/dump/undo" method="post" data-protected="true" style="display:inline;">
+    </span>
+
+        <!-- 구독 안 됨 -->
+        <span th:if="${!artistSubscribed}">
+        ❌ 구독 안 됨
+
+        <form th:action="@{/subscribe/artist}"
+              method="post"
+              style="display:inline">
             <input type="hidden" name="channelId" th:value="${channelId}">
             <input type="hidden" name="playlistId" th:value="${playlistId}">
-            <button type="submit">되돌리기</button>
+            <input type="hidden" name="artistName" th:value="${artistName}">
+            <button type="submit">아티스트 구독</button>
         </form>
-    </li>
-</ul>
+    </span>
+    </div>
 
-<a th:href="@{/playlists(channelId=${channelId})}" data-protected="true">플레이리스트로 돌아가기</a>
 
-<div th:replace="~{fragments/auth-modal :: authModal}"></div>
-<script th:replace="~{fragments/auth-modal :: authScript}"></script>
+    <!-- 플레이리스트 구독 -->
+    <div>
+        <span>플레이리스트:</span>
+
+        <!-- 구독됨 -->
+        <span th:if="${playlistSubscribed}">
+        ✅ 구독됨
+        <small th:if="${playlistLastSyncedAt != null}">
+            (마지막 동기화:
+            <span th:text="${#temporals.format(playlistLastSyncedAt, 'yyyy-MM-dd HH:mm')}"></span>)
+        </small>
+
+        <form th:action="@{/subscribe/resync/playlist}"
+              method="post"
+              style="display:inline">
+            <input type="hidden" name="channelId" th:value="${channelId}">
+            <input type="hidden" name="playlistId" th:value="${playlistId}">
+            <input type="hidden" name="playlistTitle" th:value="${playlistTitle}">
+            <button type="submit">재동기화</button>
+        </form>
+    </span>
+
+        <!-- 구독 안 됨 -->
+        <span th:if="${!playlistSubscribed}">
+        ❌ 구독 안 됨
+
+        <form th:action="@{/subscribe/playlist}"
+              method="post"
+              style="display:inline">
+            <input type="hidden" name="channelId" th:value="${channelId}">
+            <input type="hidden" name="playlistId" th:value="${playlistId}">
+            <input type="hidden" name="playlistTitle" th:value="${playlistTitle}">
+            <button type="submit">플레이리스트 구독</button>
+        </form>
+    </span>
+    </div>
+
+
+</div>
+
+<hr>
+
+
+<p>
+    제외됨: <b th:text="${dumpedCount}">0</b> /
+    없는 곡: <b th:text="${missingCount}">0</b> /
+    포함됨: <b th:text="${containedCount}">0</b>
+</p>
+
+<div class="container">
+
+    <!-- ===================== -->
+    <!-- Dumped -->
+    <!-- ===================== -->
+    <div class="column">
+        <h3>제외한 곡</h3>
+        <ul>
+            <li th:each="item : ${items}"
+                th:if="${item.status.name() == 'DUMPED'}"
+                class="dumped">
+
+                <img th:if="${item.thumbnailUrl != null}"
+                     th:src="${item.thumbnailUrl}" alt="thumb"/>
+
+                <span th:text="${item.normalizedTitle}"></span>
+
+                <!-- Undo -->
+                <form th:action="@{/dump/undo}" method="post">
+                    <input type="hidden" name="channelId" th:value="${channelId}">
+                    <input type="hidden" name="playlistId" th:value="${playlistId}">
+                    <input type="hidden" name="title" th:value="${item.normalizedTitle}">
+                    <button type="submit">되돌리기</button>
+                </form>
+            </li>
+        </ul>
+    </div>
+
+    <!-- ===================== -->
+    <!-- Missing -->
+    <!-- ===================== -->
+    <div class="column">
+        <h3>플레이리스트에 없는 곡</h3>
+        <ul>
+            <li th:each="item : ${items}"
+                th:if="${item.status.name() == 'MISSING'}">
+
+                <img th:if="${item.thumbnailUrl != null}"
+                     th:src="${item.thumbnailUrl}" alt="thumb"/>
+
+                <span th:text="${item.normalizedTitle}"></span>
+
+                <!-- Dump -->
+                <form th:action="@{/dump/add}" method="post">
+                    <input type="hidden" name="channelId" th:value="${channelId}">
+                    <input type="hidden" name="playlistId" th:value="${playlistId}">
+                    <input type="hidden" name="title" th:value="${item.normalizedTitle}">
+                    <button type="submit">제외</button>
+                </form>
+            </li>
+        </ul>
+    </div>
+
+    <!-- ===================== -->
+    <!-- Contained -->
+    <!-- ===================== -->
+    <div class="column">
+        <h3>이미 포함된 곡</h3>
+        <ul>
+            <li th:each="item : ${items}"
+                th:if="${item.status.name() == 'CONTAINED'}">
+
+                <img th:if="${item.thumbnailUrl != null}"
+                     th:src="${item.thumbnailUrl}" alt="thumb"/>
+
+                <span th:text="${item.normalizedTitle}"></span>
+            </li>
+        </ul>
+    </div>
+
+</div>
+
+<hr>
+
+<a href="/playlists">플레이리스트 선택으로 돌아가기</a>
+
 </body>
 </html>
