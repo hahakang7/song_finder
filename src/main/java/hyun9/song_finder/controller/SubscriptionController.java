@@ -1,8 +1,5 @@
 package hyun9.song_finder.controller;
 
-import hyun9.song_finder.service.AuthStateService;
-import jakarta.servlet.http.HttpSession;
-import lombok.RequiredArgsConstructor;
 import hyun9.song_finder.repository.SubscribedArtistRepository;
 import hyun9.song_finder.repository.SubscribedPlaylistRepository;
 import hyun9.song_finder.service.DummyAuthService;
@@ -20,24 +17,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RequestMapping("/subscribe")
 public class SubscriptionController {
 
-    private final AuthStateService authStateService;
-
-    @PostMapping("/artist")
-    public String subscribeArtist(@RequestParam("channelId") String channelId,
-                                  @RequestParam("playlistId") String playlistId,
-                                  HttpSession session) {
-        if (!authStateService.isAuthed(session)) {
-            return "redirect:/compare?channelId=" + channelId + "&playlistId=" + playlistId + "&loginRequired=1";
-        }
-        return "redirect:/compare?channelId=" + channelId + "&playlistId=" + playlistId;
-    }
-
-    @PostMapping("/artist/toggle")
-    public String toggleArtist(@RequestParam("channelId") String channelId,
-                               HttpSession session) {
-        if (!authStateService.isAuthed(session)) {
-            return "redirect:/artist/" + channelId + "?loginRequired=1";
-        }
     private final SubscriptionSyncService subscriptionSyncService;
     private final SubscribedPlaylistRepository subscribedPlaylistRepository;
     private final SubscribedArtistRepository subscribedArtistRepository;
@@ -91,11 +70,6 @@ public class SubscriptionController {
     }
 
     @PostMapping("/artist/resync")
-    public String resyncArtist(@RequestParam("channelId") String channelId,
-                               HttpSession session) {
-        if (!authStateService.isAuthed(session)) {
-            return "redirect:/artist/" + channelId + "?loginRequired=1";
-        }
     public String resyncArtist(
             @AuthenticationPrincipal OAuth2User principal,
             @RequestParam("channelId") String channelId,
@@ -111,31 +85,9 @@ public class SubscriptionController {
         return "redirect:/artist/" + channelId;
     }
 
+
+
     @PostMapping("/playlist")
-    public String subscribePlaylist(@RequestParam("playlistId") String playlistId,
-                                    @RequestParam("channelId") String channelId,
-                                    HttpSession session) {
-        if (!authStateService.isAuthed(session)) {
-            return "redirect:/compare?channelId=" + channelId + "&playlistId=" + playlistId + "&loginRequired=1";
-        }
-        return "redirect:/compare?channelId=" + channelId + "&playlistId=" + playlistId;
-    }
-
-    @PostMapping("/playlist/toggle")
-    public String togglePlaylist(HttpSession session) {
-        if (!authStateService.isAuthed(session)) {
-            return "redirect:/playlists?loginRequired=1";
-        }
-        return "redirect:/playlists";
-    }
-
-    @PostMapping("/resync/artist")
-    public String resyncArtistFromCompare(@RequestParam("channelId") String channelId,
-                                          @RequestParam("playlistId") String playlistId,
-                                          HttpSession session) {
-        if (!authStateService.isAuthed(session)) {
-            return "redirect:/compare?channelId=" + channelId + "&playlistId=" + playlistId + "&loginRequired=1";
-        }
     public String subscribePlaylist(
             @AuthenticationPrincipal OAuth2User principal,
             @RequestParam("playlistId") String playlistId,
@@ -206,12 +158,6 @@ public class SubscriptionController {
     }
 
     @PostMapping("/resync/playlist")
-    public String resyncPlaylistFromCompare(@RequestParam("channelId") String channelId,
-                                            @RequestParam("playlistId") String playlistId,
-                                            HttpSession session) {
-        if (!authStateService.isAuthed(session)) {
-            return "redirect:/compare?channelId=" + channelId + "&playlistId=" + playlistId + "&loginRequired=1";
-        }
     public String resyncPlaylist(
             @AuthenticationPrincipal OAuth2User principal,
             @RequestParam("channelId") String channelId,
@@ -231,4 +177,6 @@ public class SubscriptionController {
 
         return "redirect:/compare?channelId=" + channelId + "&playlistId=" + playlistId;
     }
+
+
 }
