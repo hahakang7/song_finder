@@ -1,5 +1,8 @@
 package hyun9.song_finder.controller;
 
+import hyun9.song_finder.service.AuthStateService;
+import jakarta.servlet.http.HttpSession;
+import lombok.RequiredArgsConstructor;
 import hyun9.song_finder.domain.SubscribedPlaylist;
 import hyun9.song_finder.repository.SubscribedPlaylistRepository;
 import hyun9.song_finder.service.DummyAuthService;
@@ -16,20 +19,30 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.client.RestTemplate;
 
-import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @Controller
 @RequiredArgsConstructor
 public class PlaylistController {
 
+    private final AuthStateService authStateService;
 
+    @GetMapping("/playlists")
+    public String getUserPlaylists(@RequestParam(required = false) String channelId,
+                                   Model model,
+                                   HttpSession session) {
+        boolean isAuthed = authStateService.isAuthed(session);
+        model.addAttribute("isAuthed", isAuthed);
+        model.addAttribute("showLoginModal", !isAuthed);
+        model.addAttribute("selectedChannelId", channelId);
+
+        model.addAttribute("playlists", List.of(
+                Map.of("id", "pl-favorite", "title", "내 최애곡", "subscribed", true, "lastSyncedAt", "2026-02-13 21:10"),
+                Map.of("id", "pl-drive", "title", "드라이브 노래", "subscribed", true, "lastSyncedAt", "2026-02-09 18:20"),
+                Map.of("id", "pl-study", "title", "집중용 플레이리스트", "subscribed", false, "lastSyncedAt", "-")
+        ));
     private final YoutubeService youtubeService;
     private final DummyAuthService dummyAuthService;
     private final SubscribedPlaylistRepository subscribedPlaylistRepository;
@@ -67,6 +80,18 @@ public class PlaylistController {
         return "playlists";
     }
 
+    @GetMapping("/playlist/{id}")
+    public String getPlaylistItems(@PathVariable String id, Model model, HttpSession session) {
+        boolean isAuthed = authStateService.isAuthed(session);
+        model.addAttribute("isAuthed", isAuthed);
+        model.addAttribute("showLoginModal", !isAuthed);
+        model.addAttribute("id", id);
+
+        model.addAttribute("playlistItems", List.of(
+                Map.of("title", "Ditto"),
+                Map.of("title", "밤편지"),
+                Map.of("title", "Attention")
+        ));
 
 
     public Map<String, Object> fetchPlaylistsFromYouTube(String accessToken, String pageToken) {
@@ -107,20 +132,4 @@ public class PlaylistController {
 
         return "playlist-detail";
     }
-
-    public List<Map<String, Object>> fetchPlaylistItems(String accessToken, String playlistId) {
-        String url = "https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=" +
-                playlistId + "&maxResults=50";
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(accessToken);
-        HttpEntity<?> entity = new HttpEntity<>(headers);
-
-        RestTemplate restTemplate = new RestTemplate();
-        ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.GET, entity, Map.class);
-
-        return (List<Map<String, Object>>) response.getBody().get("items");
-    }
-
-
 }
