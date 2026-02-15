@@ -1,62 +1,26 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title>채널 등록</title>
-    <style>
-        body { font-family: Arial, sans-serif; }
-        .card { padding: 12px; border: 1px solid #ddd; margin: 12px 0; }
-        img { vertical-align: middle; margin-right: 8px; }
-        form { display: inline; }
-        button { margin-left: 6px; }
-        small { color: gray; }
-    </style>
-</head>
+<head><meta charset="UTF-8"><title>Artist Registered</title></head>
 <body>
+<div th:replace="~{fragments/header :: topHeader}"></div>
 
-<h2>아티스트 등록 완료</h2>
-
-<div class="card">
-    <div>
-        <!-- channelInfo.snippet.thumbnails.default.url -->
-        <img th:if="${artistThumbnailUrl != null}"
-             th:src="${artistThumbnailUrl}"
-             alt="thumb">
-
-
-        <b th:text="${artistName != null ? artistName : '알 수 없는 아티스트'}">Artist</b>
-        <small th:text="'(channelId: ' + ${channelId} + ')'">(channelId)</small>
-    </div>
-
-    <div style="margin-top: 8px;">
-        <!-- ✅ 선택지 1 핵심: 관리 페이지로 이동 -->
-        <a th:href="@{/artist/{channelId}(channelId=${channelId})}">
-            아티스트 관리(구독/재동기화/해지)로 이동
-        </a>
-    </div>
+<h2>Artist Registered (dummy)</h2>
+<div>
+    <img th:if="${artistThumbnailUrl != null}" th:src="${artistThumbnailUrl}" alt="thumb">
+    <b th:text="${artistName}"></b>
+    <small th:text="${channelId}"></small>
 </div>
 
-<hr>
-
-<h3>비교할 플레이리스트 선택</h3>
-
-<form th:action="@{/compare}" method="get">
+<form action="/compare" method="get" data-protected="true">
     <input type="hidden" name="channelId" th:value="${channelId}">
-
     <select name="playlistId" required>
-        <option value="" disabled selected>플레이리스트 선택</option>
-        <option th:each="pl : ${playlists}"
-                th:value="${pl.id}"
-                th:text="${pl.snippet.title}">
-        </option>
+        <option th:each="pl : ${playlists}" th:value="${pl.id}" th:text="${pl.title}"></option>
     </select>
-
-    <button type="submit">비교하기</button>
+    <button type="submit">Compare</button>
 </form>
 
-<hr>
-
-<a href="/playlists">플레이리스트 목록으로 돌아가기</a>
-
+<div th:replace="~{fragments/auth-modal :: authModal}"></div>
+<script th:replace="~{fragments/header :: headerScript}"></script>
+<script th:replace="~{fragments/auth-modal :: authScript}"></script>
 </body>
 </html>

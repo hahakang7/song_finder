@@ -1,48 +1,35 @@
 package hyun9.song_finder.controller;
 
-import hyun9.song_finder.domain.SubscribedArtist;
-import hyun9.song_finder.domain.SubscribedPlaylist;
-import hyun9.song_finder.repository.SubscribedArtistRepository;
-import hyun9.song_finder.repository.SubscribedPlaylistRepository;
+import hyun9.song_finder.service.AuthStateService;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 
-import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 @Controller
 @RequiredArgsConstructor
 public class HomeController {
 
-    private final SubscribedArtistRepository subscribedArtistRepository;
-    private final SubscribedPlaylistRepository subscribedPlaylistRepository;
+    private final AuthStateService authStateService;
 
     @GetMapping("/")
-    public String home(@AuthenticationPrincipal OAuth2User principal, Model model) {
+    public String home(Model model, HttpSession session) {
+        boolean isAuthed = authStateService.isAuthed(session);
+        model.addAttribute("isAuthed", isAuthed);
 
-        // 보통 Security가 로그인으로 보내지만, 안전하게 처리
-        if (principal == null) return "redirect:/oauth2/authorization/google";
-
-        String userId = principal.getName();
-
-        List<SubscribedArtist> artists = subscribedArtistRepository.findByUserId(userId);
-        artists.sort(Comparator.comparing(
-                SubscribedArtist::getLastSyncedAt,
-                Comparator.nullsLast(Comparator.reverseOrder())
+        model.addAttribute("subscribedArtists", List.of(
+                Map.of("artistName", "IU", "channelId", "artist-iu", "lastSyncedAt", "2026-02-10 09:30"),
+                Map.of("artistName", "NewJeans", "channelId", "artist-newjeans", "lastSyncedAt", "2026-02-12 14:00")
         ));
 
-        List<SubscribedPlaylist> playlists = subscribedPlaylistRepository.findByUserId(userId);
-        playlists.sort(Comparator.comparing(
-                SubscribedPlaylist::getLastSyncedAt,
-                Comparator.nullsLast(Comparator.reverseOrder())
+        model.addAttribute("subscribedPlaylists", List.of(
+                Map.of("playlistTitle", "내 최애곡", "playlistId", "pl-favorite", "lastSyncedAt", "2026-02-13 21:10"),
+                Map.of("playlistTitle", "드라이브 노래", "playlistId", "pl-drive", "lastSyncedAt", "2026-02-09 18:20")
         ));
-
-        model.addAttribute("subscribedArtists", artists);
-        model.addAttribute("subscribedPlaylists", playlists);
 
         return "home";
     }

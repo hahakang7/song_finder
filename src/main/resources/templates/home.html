@@ -1,90 +1,32 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title>Song Finder - Home</title>
-    <style>
-        body { font-family: Arial, sans-serif; }
-        .topnav { margin: 12px 0; }
-        .topnav a { margin-right: 12px; }
-        .container { display: flex; gap: 24px; }
-        .col { width: 50%; border: 1px solid #ddd; padding: 12px; }
-        ul { list-style: none; padding: 0; }
-        li { padding: 8px 0; border-bottom: 1px solid #eee; }
-        small { color: gray; }
-        form { display: inline; }
-        button { margin-left: 6px; }
-        .empty { color: gray; }
-    </style>
-</head>
+<head><meta charset="UTF-8"><title>Song Finder - Home</title></head>
 <body>
+<div th:replace="~{fragments/header :: topHeader}"></div>
 
-<h2>홈</h2>
+<h2>Home</h2>
+<p th:text="${isAuthed} ? 'Logged in' : 'Guest mode'"></p>
 
-<div class="topnav">
-    <a href="/playlists">재생목록 관리</a>
-    <a href="/subscriptions">구독목록 관리</a>
-    <a href="/artist/link">아티스트 등록</a>
-</div>
+<h3>Subscribed Artists (dummy)</h3>
+<ul>
+    <li th:each="a : ${subscribedArtists}">
+        <b th:text="${a.artistName}"></b>
+        <small th:text="' (' + ${a.lastSyncedAt} + ')'" style="color:gray;"></small>
+        <a th:href="@{/artist/{channelId}(channelId=${a.channelId})}" data-protected="true">Detail</a>
+    </li>
+</ul>
 
-<div class="container">
+<h3>Subscribed Playlists (dummy)</h3>
+<ul>
+    <li th:each="p : ${subscribedPlaylists}">
+        <b th:text="${p.playlistTitle}"></b>
+        <small th:text="' (' + ${p.lastSyncedAt} + ')'" style="color:gray;"></small>
+        <a th:href="@{/playlist/{id}(id=${p.playlistId})}" data-protected="true">Detail</a>
+    </li>
+</ul>
 
-    <!-- 좌측: 구독 아티스트 -->
-    <div class="col">
-        <h3>구독한 아티스트</h3>
-
-        <div th:if="${#lists.isEmpty(subscribedArtists)}" class="empty">
-            구독한 아티스트가 없습니다.
-        </div>
-
-        <ul>
-            <li th:each="a : ${subscribedArtists}">
-                <b th:text="${a.artistName}">Artist</b>
-                <small th:if="${a.lastSyncedAt != null}">
-                    (마지막:
-                    <span th:text="${#temporals.format(a.lastSyncedAt, 'yyyy-MM-dd HH:mm')}"></span>)
-                </small>
-
-                <a th:href="@{/artist/{channelId}(channelId=${a.channelId})}"
-                   style="margin-left:8px;">
-                    관리
-                </a>
-
-                <a th:href="@{/playlists(channelId=${a.channelId})}"
-                   style="margin-left:8px;">
-                    이 아티스트로 비교
-                </a>
-            </li>
-        </ul>
-    </div>
-
-    <!-- 우측: 구독 플레이리스트 -->
-    <div class="col">
-        <h3>구독한 재생목록</h3>
-
-        <div th:if="${#lists.isEmpty(subscribedPlaylists)}" class="empty">
-            구독한 재생목록이 없습니다.
-        </div>
-
-        <ul>
-            <li th:each="p : ${subscribedPlaylists}">
-                <b th:text="${p.playlistTitle}">Playlist</b>
-                <small th:if="${p.lastSyncedAt != null}">
-                    (마지막:
-                    <span th:text="${#temporals.format(p.lastSyncedAt, 'yyyy-MM-dd HH:mm')}"></span>)
-                </small>
-
-                <a th:href="@{/playlist/{id}(id=${p.playlistId})}"
-                   style="margin-left:8px;">
-                    보기
-                </a>
-
-                <!-- 비교는 아티스트가 필요하니 여기선 링크만 두거나, subscriptions에서 조합 -->
-            </li>
-        </ul>
-    </div>
-
-</div>
-
+<div th:replace="~{fragments/auth-modal :: authModal}"></div>
+<script th:replace="~{fragments/header :: headerScript}"></script>
+<script th:replace="~{fragments/auth-modal :: authScript}"></script>
 </body>
 </html>

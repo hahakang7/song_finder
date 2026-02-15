@@ -19,7 +19,7 @@ import java.util.regex.Pattern;
 @Service
 public class YoutubeService {
 
-    @Value("${youtube.api.key}")
+    @Value("${youtube.api.key:}")
     private String API_KEY;
 
 

@@ -1,88 +1,33 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title>구독목록 관리</title>
-    <style>
-        body { font-family: Arial, sans-serif; }
-        .container { display: flex; gap: 24px; }
-        .col { width: 50%; border: 1px solid #ddd; padding: 12px; }
-        ul { list-style: none; padding: 0; }
-        li { padding: 8px 0; border-bottom: 1px solid #eee; }
-        form { display: inline; }
-        button { margin-left: 6px; }
-        small { color: gray; }
-    </style>
-</head>
+<head><meta charset="UTF-8"><title>Subscribed Artist Management</title></head>
 <body>
+<div th:replace="~{fragments/header :: topHeader}"></div>
 
-<h2>구독목록 관리</h2>
+<h2>Subscribed Artist Management (dummy)</h2>
 
-<div style="margin: 12px 0;">
-    <a href="/">홈</a>
-    <a href="/playlists" style="margin-left:10px;">재생목록 관리</a>
-    <a href="/artist/link" style="margin-left:10px;">아티스트 등록</a>
-</div>
+<h3>Artists</h3>
+<ul>
+    <li th:each="a : ${subscribedArtists}">
+        <b th:text="${a.artistName}"></b>
+        <a th:href="@{/artist/{channelId}(channelId=${a.channelId})}" data-protected="true">Manage</a>
+        <form action="/subscribe/artist/toggle" method="post" data-protected="true" style="display:inline;">
+            <input type="hidden" name="channelId" th:value="${a.channelId}">
+            <button type="submit">Unsubscribe</button>
+        </form>
+    </li>
+</ul>
 
-<div class="container">
+<h3>Subscribed Playlists</h3>
+<ul>
+    <li th:each="p : ${subscribedPlaylists}">
+        <b th:text="${p.playlistTitle}"></b>
+        <a th:href="@{/playlist/{id}(id=${p.playlistId})}" data-protected="true">View</a>
+    </li>
+</ul>
 
-    <div class="col">
-        <h3>가수 구독</h3>
-        <ul>
-            <li th:each="a : ${subscribedArtists}">
-                <b th:text="${a.artistName}">Artist</b>
-                <small th:if="${a.lastSyncedAt != null}">
-                    (마지막:
-                    <span th:text="${#temporals.format(a.lastSyncedAt, 'yyyy-MM-dd HH:mm')}"></span>)
-                </small>
-
-                <a th:href="@{/artist/{channelId}(channelId=${a.channelId})}"
-                   style="margin-left:8px;">관리</a>
-
-                <form th:action="@{/subscribe/artist/toggle}" method="post">
-                    <input type="hidden" name="channelId" th:value="${a.channelId}">
-                    <input type="hidden" name="artistName" th:value="${a.artistName}">
-                    <button type="submit">구독 해지</button>
-                </form>
-
-                <form th:action="@{/subscribe/artist/resync}" method="post">
-                    <input type="hidden" name="channelId" th:value="${a.channelId}">
-                    <input type="hidden" name="artistName" th:value="${a.artistName}">
-                    <button type="submit">재동기화</button>
-                </form>
-            </li>
-        </ul>
-    </div>
-
-    <div class="col">
-        <h3>재생목록 구독</h3>
-        <ul>
-            <li th:each="p : ${subscribedPlaylists}">
-                <b th:text="${p.playlistTitle}">Playlist</b>
-                <small th:if="${p.lastSyncedAt != null}">
-                    (마지막:
-                    <span th:text="${#temporals.format(p.lastSyncedAt, 'yyyy-MM-dd HH:mm')}"></span>)
-                </small>
-
-                <a th:href="@{/playlist/{id}(id=${p.playlistId})}"
-                   style="margin-left:8px;">보기</a>
-
-                <form th:action="@{/subscribe/playlist/toggle}" method="post">
-                    <input type="hidden" name="playlistId" th:value="${p.playlistId}">
-                    <input type="hidden" name="playlistTitle" th:value="${p.playlistTitle}">
-                    <button type="submit">구독 해지</button>
-                </form>
-
-                <form th:action="@{/subscribe/playlist/resync}" method="post">
-                    <input type="hidden" name="playlistId" th:value="${p.playlistId}">
-                    <input type="hidden" name="playlistTitle" th:value="${p.playlistTitle}">
-                    <button type="submit">재동기화</button>
-                </form>
-            </li>
-        </ul>
-    </div>
-
-</div>
-
+<div th:replace="~{fragments/auth-modal :: authModal}"></div>
+<script th:replace="~{fragments/header :: headerScript}"></script>
+<script th:replace="~{fragments/auth-modal :: authScript}"></script>
 </body>
 </html>
