@@ -1,22 +1,83 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <title>채널 등록</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>아티스트 등록</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
 
-<h2>유튜브 채널 링크 입력</h2>
+<body class="bg-white text-slate-900">
+<!-- Header -->
+<header class="border-b border-slate-200 bg-white">
+    <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
+        <div class="flex items-center gap-3">
+            <a href="/" class="flex items-center gap-2">
+                <div class="h-7 w-7 rounded-xl bg-slate-900"></div>
+                <span class="text-sm font-semibold tracking-tight">Song Finder</span>
+            </a>
+            <span class="hidden sm:inline text-sm text-slate-500">아티스트 등록</span>
+        </div>
 
-<form th:action="@{/artist/link}" method="post">
-    <label for="channelUrl">채널 URL</label>
-    <input id="channelUrl" name="channelUrl" type="text" size="80"
-           placeholder="예) https://www.youtube.com/channel/UCxxxx 또는 https://www.youtube.com/@handle"
-           required>
-    <button type="submit">확인</button>
-</form>
+        <div class="flex items-center gap-3">
+            <a href="/playlists"
+               class="rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50">
+                재생목록 관리
+            </a>
+            <a href="/artistlists"
+               class="rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50">
+                구독 아티스트 관리
+            </a>
+        </div>
+    </div>
+</header>
 
-<p th:if="${error}" th:text="${error}" style="color:red;"></p>
+<main class="mx-auto max-w-3xl px-4 py-10">
+    <a href="/" class="text-sm font-medium text-slate-700 hover:underline">← 홈</a>
 
+    <div class="mt-4">
+        <h1 class="text-2xl font-semibold tracking-tight">아티스트 채널 등록</h1>
+        <p class="mt-2 text-sm text-slate-600">
+            YouTube 채널 URL을 붙여넣으면 채널을 확인하고 등록(구독) 흐름을 진행한다.
+        </p>
+    </div>
+
+    <!-- Error -->
+    <div th:if="${error != null}"
+         class="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+        해당 아티스트를 찾을 수 없습니다!
+    </div>
+
+    <!-- Form -->
+    <section class="mt-6 rounded-2xl border border-slate-200 p-6">
+        <form th:action="@{/artist/link}" method="post" class="space-y-4">
+
+            <label class="block">
+                <span class="text-sm font-medium">아티스트 채널 주소</span>
+                <input name="channelUrl"
+                       type="url"
+                       required
+                       placeholder="예: https://www.youtube.com/@vaundy 또는 https://www.youtube.com/channel/UCxxxx"
+                       class="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-400" />
+            </label>
+
+            <div class="flex flex-wrap items-center gap-3">
+                <button type="submit"
+                        class="rounded-xl bg-slate-900 px-4 py-3 text-sm font-medium text-white hover:bg-slate-800">
+                    등록하기
+                </button>
+
+                <a href="/artistlists"
+                   class="rounded-xl border border-slate-300 px-4 py-3 text-sm font-medium hover:bg-slate-50">
+                    구독 아티스트 관리로
+                </a>
+            </div>
+
+            <p class="pt-2 text-xs text-slate-500">
+                참고: 크롤링은 사용하지 않고 YouTube Data API로만 처리한다.
+            </p>
+        </form>
+    </section>
+</main>
 </body>
 </html>
