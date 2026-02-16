@@ -1,6 +1,8 @@
 package hyun9.song_finder.repository;
 
 import hyun9.song_finder.domain.SubscribedArtist;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -12,4 +14,6 @@ public interface SubscribedArtistRepository extends JpaRepository<SubscribedArti
     void deleteByUserIdAndChannelId(String userId, String playlistId);
 
     List<SubscribedArtist> findByUserId(String userId);
+
+    Page<SubscribedArtist> findByUserId(String userId, Pageable pageable);
 }

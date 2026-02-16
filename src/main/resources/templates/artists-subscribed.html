@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>구독 아티스트 관리</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-white text-slate-900">
+<!-- Header -->
+<header class="border-b border-slate-200 bg-white">
+    <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
+        <div class="flex items-center gap-3">
+            <a href="/" class="flex items-center gap-2">
+                <div class="h-7 w-7 rounded-xl bg-slate-900"></div>
+                <span class="text-sm font-semibold tracking-tight">Song Finder</span>
+            </a>
+            <span class="hidden sm:inline text-sm text-slate-500">구독 아티스트 관리</span>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <a href="/playlists"
+               class="rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50">
+                재생목록 관리
+            </a>
+            <a href="/artist/link"
+               class="rounded-xl bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800">
+                아티스트 등록
+            </a>
+        </div>
+    </div>
+</header>
+
+<main class="mx-auto max-w-6xl px-4 py-10">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-semibold tracking-tight">내가 구독한 아티스트</h1>
+            <p class="mt-2 text-sm text-slate-600">
+                아티스트 스냅샷을 유지하면 비교가 더 빠르다. 필요하면 재동기화를 실행한다.
+            </p>
+        </div>
+
+        <div class="flex items-center gap-2 text-xs text-slate-500">
+            <span>페이지</span>
+            <b th:text="${page + 1}">1</b>
+        </div>
+    </div>
+
+    <!-- List -->
+    <section class="mt-8 overflow-hidden rounded-2xl border border-slate-200">
+        <div class="grid grid-cols-12 gap-0 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-600">
+            <div class="col-span-7 sm:col-span-8">아티스트</div>
+            <div class="col-span-5 sm:col-span-4 text-right">동작</div>
+        </div>
+
+        <!-- Empty -->
+        <div th:if="${#lists.isEmpty(artists)}"
+             class="p-6 text-sm text-slate-600">
+            아직 구독한 아티스트가 없다. 우측 상단의 “아티스트 등록”에서 추가한다.
+        </div>
+
+        <ul class="divide-y divide-slate-200" th:if="${!#lists.isEmpty(artists)}">
+            <li th:each="a : ${artists}" class="px-4 py-4">
+                <div class="grid grid-cols-12 items-center gap-3">
+                    <!-- Left -->
+                    <div class="col-span-7 sm:col-span-8">
+                        <div class="flex items-start gap-3">
+                            <img th:if="${a.thumbnailUrl != null}"
+                                 th:src="${a.thumbnailUrl}"
+                                 alt="artist"
+                                 class="mt-1 h-10 w-10 rounded-xl border border-slate-200 object-cover" />
+                            <div th:if="${a.thumbnailUrl == null}"
+                                 class="mt-1 h-10 w-10 rounded-xl bg-slate-200"></div>
+
+                            <div class="min-w-0">
+                                <div class="truncate text-sm font-semibold"
+                                     th:text="${a.artistName != null ? a.artistName : a.channelId}">
+                                    Artist
+                                </div>
+
+                                <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+                                    <span th:text="'channelId: ' + ${a.channelId}">channelId</span>
+
+                                    <span th:if="${a.lastSyncedAt != null}">
+                      마지막 동기화:
+                      <span th:text="${#temporals.format(a.lastSyncedAt, 'yyyy-MM-dd HH:mm')}"></span>
+                    </span>
+                                    <span th:if="${a.lastSyncedAt == null}">
+                      아직 동기화 기록이 없다.
+                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right -->
+                    <div class="col-span-5 sm:col-span-4 flex justify-end gap-2">
+                        <a th:href="@{/artist/{channelId}(channelId=${a.channelId})}"
+                           class="rounded-xl border border-slate-300 px-3 py-2 text-xs font-medium hover:bg-slate-50">
+                            관리
+                        </a>
+
+                        <!-- Unsubscribe (toggle endpoint 사용) -->
+                        <form th:action="@{/subscribe/artist/toggle}" method="post">
+                            <input type="hidden" name="channelId" th:value="${a.channelId}" />
+                            <input type="hidden" name="artistName" th:value="${a.artistName}" />
+                            <button type="submit"
+                                    class="rounded-xl border border-slate-300 px-3 py-2 text-xs font-medium hover:bg-slate-50">
+                                구독 해지
+                            </button>
+                        </form>
+
+                        <!-- Resync -->
+                        <form th:action="@{/subscribe/artist/resync}" method="post">
+                            <input type="hidden" name="channelId" th:value="${a.channelId}" />
+                            <input type="hidden" name="artistName" th:value="${a.artistName}" />
+                            <button type="submit"
+                                    class="rounded-xl bg-slate-900 px-3 py-2 text-xs font-medium text-white hover:bg-slate-800">
+                                재동기화
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </li>
+        </ul>
+    </section>
+
+    <!-- Pagination (DB Page 기반) -->
+    <div class="mt-6 flex items-center justify-between">
+        <a th:if="${page > 0}"
+           th:href="@{/artistlists(page=${page - 1}, size=${size})}"
+           class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50">
+            이전
+        </a>
+        <div th:if="${page == 0}" class="text-sm text-slate-400">
+            이전 페이지 없음
+        </div>
+
+        <a th:if="${hasNext}"
+           th:href="@{/artistlists(page=${page + 1}, size=${size})}"
+           class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50">
+            다음
+        </a>
+        <div th:if="${!hasNext}" class="text-sm text-slate-400">
+            다음 페이지 없음
+        </div>
+    </div>
+
+
+    <div class="mt-10">
+        <a href="/" class="text-sm font-medium text-slate-700 hover:underline">← 홈으로</a>
+    </div>
+</main>
+</body>
+</html>

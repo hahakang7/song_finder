@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="ko">
 <head>
@@ -147,21 +148,21 @@
 
     <!-- Pagination -->
     <div class="mt-6 flex items-center justify-between">
-        <a th:if="${prevPageToken}"
+        <a th:if="${not #strings.isEmpty(prevPageToken)}"
            th:href="@{/playlists(pageToken=${prevPageToken})}"
            class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50">
             이전
         </a>
-        <div th:if="${!prevPageToken}" class="text-sm text-slate-400">
+        <div th:if="${#strings.isEmpty(prevPageToken)}" class="text-sm text-slate-400">
             이전 페이지 없음
         </div>
 
-        <a th:if="${nextPageToken}"
+        <a th:if="${not #strings.isEmpty(nextPageToken)}"
            th:href="@{/playlists(pageToken=${nextPageToken})}"
            class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50">
             다음
         </a>
-        <div th:if="${!nextPageToken}" class="text-sm text-slate-400">
+        <div th:if="${#strings.isEmpty(nextPageToken)}" class="text-sm text-slate-400">
             다음 페이지 없음.
         </div>
     </div>
@@ -169,6 +170,7 @@
     <div class="mt-10">
         <a href="/" class="text-sm font-medium text-slate-700 hover:underline">← 홈으로</a>
     </div>
+
 </main>
 </body>
 </html>

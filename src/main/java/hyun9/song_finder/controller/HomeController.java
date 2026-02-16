@@ -11,7 +11,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 
-import java.util.Comparator;
 import java.util.List;
 
 @Controller
@@ -24,22 +23,24 @@ public class HomeController {
     @GetMapping("/")
     public String home(@AuthenticationPrincipal OAuth2User principal, Model model) {
 
-        // 보통 Security가 로그인으로 보내지만, 안전하게 처리
-        if (principal == null) return "redirect:/oauth2/authorization/google";
+        boolean authed = (principal != null);
+        model.addAttribute("isAuthenticated", authed);
+
+        if (!authed) {
+            model.addAttribute("subscribedArtists", List.of());
+            model.addAttribute("subscribedPlaylists", List.of());
+            // 로그인 버튼은 sec:authorize가 처리하므로 여기서 추가 작업 없음
+            return "home";
+        }
+
+        // 로그인 사용자 정보 (Google OAuth2의 표준 클레임)
+        model.addAttribute("userName", principal.getAttribute("name"));
+        model.addAttribute("userAvatarUrl", principal.getAttribute("picture"));
 
         String userId = principal.getName();
 
         List<SubscribedArtist> artists = subscribedArtistRepository.findByUserId(userId);
-        artists.sort(Comparator.comparing(
-                SubscribedArtist::getLastSyncedAt,
-                Comparator.nullsLast(Comparator.reverseOrder())
-        ));
-
         List<SubscribedPlaylist> playlists = subscribedPlaylistRepository.findByUserId(userId);
-        playlists.sort(Comparator.comparing(
-                SubscribedPlaylist::getLastSyncedAt,
-                Comparator.nullsLast(Comparator.reverseOrder())
-        ));
 
         model.addAttribute("subscribedArtists", artists);
         model.addAttribute("subscribedPlaylists", playlists);
