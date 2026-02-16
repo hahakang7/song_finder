@@ -1,72 +1,174 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <title>Playlists</title>
-    <style>
-        li { margin-bottom: 10px; }
-        form { display: inline; }
-        button { margin-left: 6px; }
-        small { color: gray; }
-    </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>재생목록 관리</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
 
-<h1>내 재생목록 목록</h1>
+<body class="bg-white text-slate-900">
+<!-- Header -->
+<header class="border-b border-slate-200 bg-white">
+    <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
+        <div class="flex items-center gap-3">
+            <a href="/" class="flex items-center gap-2">
+                <div class="h-7 w-7 rounded-xl bg-slate-900"></div>
+                <span class="text-sm font-semibold tracking-tight">Song Finder</span>
+            </a>
+            <span class="hidden sm:inline text-sm text-slate-500">재생목록 관리</span>
+        </div>
 
-<ul>
-    <li th:each="pl : ${playlists}">
+        <div class="flex items-center gap-3">
+            <a href="/subscriptions"
+               class="rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50">
+                구독목록 관리
+            </a>
+            <a href="/artist/link"
+               class="rounded-xl bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800">
+                아티스트 등록
+            </a>
+        </div>
+    </div>
+</header>
 
-        <!-- 기존: 상세 페이지 링크 유지 -->
-        <a th:href="@{/playlist/{id}(id=${pl.id})}"
-           th:text="${pl.snippet.title}"></a>
+<main class="mx-auto max-w-6xl px-4 py-10">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-semibold tracking-tight">내 재생목록</h1>
+            <p class="mt-2 text-sm text-slate-600">
+                재생목록을 구독하면 DB에 스냅샷을 저장해 비교 속도가 빨라진다.
+            </p>
+        </div>
 
-        <!-- 구독 상태 표시 -->
-        <span th:if="${subscribedPlaylistIds.contains(pl.id)}">
-            ✅ 구독됨
-            <small th:if="${playlistLastSyncedMap[pl.id] != null}">
-                (마지막:
-                <span th:text="${#temporals.format(playlistLastSyncedMap[pl.id], 'yyyy-MM-dd HH:mm')}"></span>)
-            </small>
+        <div class="flex items-center gap-2">
+        <span class="text-xs text-slate-500">
+          구독됨:
+          <b th:text="${subscribedPlaylistIds != null ? subscribedPlaylistIds.size() : 0}">0</b>
         </span>
-        <span th:if="${!subscribedPlaylistIds.contains(pl.id)}">
-            ❌ 구독 안 됨
-        </span>
+        </div>
+    </div>
 
-        <!-- 구독/해지 토글 -->
-        <form th:action="@{/subscribe/playlist/toggle}" method="post">
-            <input type="hidden" name="playlistId" th:value="${pl.id}">
-            <input type="hidden" name="playlistTitle" th:value="${pl.snippet.title}">
-            <button type="submit"
-                    th:text="${subscribedPlaylistIds.contains(pl.id)} ? '구독 해지' : '구독'">
-                구독
-            </button>
-        </form>
+    <!-- List -->
+    <section class="mt-8 overflow-hidden rounded-2xl border border-slate-200">
+        <div class="grid grid-cols-12 gap-0 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-600">
+            <div class="col-span-7 sm:col-span-8">재생목록</div>
+            <div class="col-span-5 sm:col-span-4 text-right">동작</div>
+        </div>
 
-        <!-- 재동기화(구독된 경우만) -->
-        <form th:if="${subscribedPlaylistIds.contains(pl.id)}"
-              th:action="@{/subscribe/playlist/resync}" method="post">
-            <input type="hidden" name="playlistId" th:value="${pl.id}">
-            <input type="hidden" name="playlistTitle" th:value="${pl.snippet.title}">
-            <button type="submit">재동기화</button>
-        </form>
+        <ul class="divide-y divide-slate-200">
+            <li th:each="pl : ${playlists}" class="px-4 py-4">
+                <div class="grid grid-cols-12 items-center gap-3">
+                    <!-- Left -->
+                    <div class="col-span-7 sm:col-span-8">
+                        <div class="flex items-start gap-3">
+                            <!-- Thumbnail (optional) -->
+                            <img th:if="${pl.snippet != null and pl.snippet.thumbnails != null and pl.snippet.thumbnails.default != null}"
+                                 th:src="${pl.snippet.thumbnails.default.url}"
+                                 alt="thumb"
+                                 class="mt-1 h-10 w-10 rounded-xl border border-slate-200 object-cover" />
+                            <div th:if="${pl.snippet == null or pl.snippet.thumbnails == null or pl.snippet.thumbnails.default == null}"
+                                 class="mt-1 h-10 w-10 rounded-xl bg-slate-200"></div>
 
-    </li>
-</ul>
+                            <div class="min-w-0">
+                                <div class="truncate text-sm font-semibold"
+                                     th:text="${pl.snippet.title}">
+                                    Playlist Title
+                                </div>
 
-<!-- 페이지네이션 -->
-<div>
-    <a th:if="${prevPageToken}" th:href="@{/playlists(pageToken=${prevPageToken})}">이전</a>
-    <a th:if="${nextPageToken}" th:href="@{/playlists(pageToken=${nextPageToken})}">다음</a>
-</div>
+                                <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+                                    <span th:text="'playlistId: ' + ${pl.id}">playlistId</span>
 
-<div style="margin-top: 20px;">
-    <a href="/artist/link">아티스트 등록</a>
-</div>
+                                    <!-- subscribed badge -->
+                                    <span th:if="${subscribedPlaylistIds != null and subscribedPlaylistIds.contains(pl.id)}"
+                                          class="rounded-full bg-slate-900/10 px-2 py-0.5 font-medium text-slate-900">
+                      구독됨
+                    </span>
+                                    <span th:if="${subscribedPlaylistIds == null or !subscribedPlaylistIds.contains(pl.id)}"
+                                          class="rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-700">
+                      구독 안 됨
+                    </span>
 
-<div>
-    <a href="/">홈으로</a>
-</div>
+                                    <!-- last synced -->
+                                    <span th:if="${playlistLastSyncedMap != null and playlistLastSyncedMap[pl.id] != null}">
+                      마지막 동기화:
+                      <span th:text="${#temporals.format(playlistLastSyncedMap[pl.id], 'yyyy-MM-dd HH:mm')}"></span>
+                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
+                    <!-- Right: actions -->
+                    <div class="col-span-5 sm:col-span-4 flex justify-end gap-2">
+                        <!-- Not subscribed: Subscribe -->
+                        <form th:if="${subscribedPlaylistIds == null or !subscribedPlaylistIds.contains(pl.id)}"
+                              th:action="@{/subscribe/playlist/toggle}" method="post">
+                            <input type="hidden" name="playlistId" th:value="${pl.id}" />
+                            <input type="hidden" name="playlistTitle" th:value="${pl.snippet.title}" />
+                            <button type="submit"
+                                    class="rounded-xl bg-slate-900 px-3 py-2 text-xs font-medium text-white hover:bg-slate-800">
+                                구독
+                            </button>
+                        </form>
+
+                        <!-- Subscribed: Unsubscribe -->
+                        <form th:if="${subscribedPlaylistIds != null and subscribedPlaylistIds.contains(pl.id)}"
+                              th:action="@{/subscribe/playlist/toggle}" method="post">
+                            <input type="hidden" name="playlistId" th:value="${pl.id}" />
+                            <input type="hidden" name="playlistTitle" th:value="${pl.snippet.title}" />
+                            <button type="submit"
+                                    class="rounded-xl border border-slate-300 px-3 py-2 text-xs font-medium hover:bg-slate-50">
+                                구독 해지
+                            </button>
+                        </form>
+
+                        <!-- Subscribed: Resync -->
+                        <form th:if="${subscribedPlaylistIds != null and subscribedPlaylistIds.contains(pl.id)}"
+                              th:action="@{/subscribe/playlist/resync}" method="post">
+                            <input type="hidden" name="playlistId" th:value="${pl.id}" />
+                            <input type="hidden" name="playlistTitle" th:value="${pl.snippet.title}" />
+                            <button type="submit"
+                                    class="rounded-xl border border-slate-300 px-3 py-2 text-xs font-medium hover:bg-slate-50">
+                                재동기화
+                            </button>
+                        </form>
+
+                        <!-- Detail (optional but useful) -->
+                        <a th:href="@{/playlist/{id}(id=${pl.id})}"
+                           class="rounded-xl border border-slate-300 px-3 py-2 text-xs font-medium hover:bg-slate-50">
+                            상세
+                        </a>
+                    </div>
+                </div>
+            </li>
+        </ul>
+    </section>
+
+    <!-- Pagination -->
+    <div class="mt-6 flex items-center justify-between">
+        <a th:if="${prevPageToken}"
+           th:href="@{/playlists(pageToken=${prevPageToken})}"
+           class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50">
+            이전
+        </a>
+        <div th:if="${!prevPageToken}" class="text-sm text-slate-400">
+            이전 페이지 없음
+        </div>
+
+        <a th:if="${nextPageToken}"
+           th:href="@{/playlists(pageToken=${nextPageToken})}"
+           class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50">
+            다음
+        </a>
+        <div th:if="${!nextPageToken}" class="text-sm text-slate-400">
+            다음 페이지 없음.
+        </div>
+    </div>
+
+    <div class="mt-10">
+        <a href="/" class="text-sm font-medium text-slate-700 hover:underline">← 홈으로</a>
+    </div>
+</main>
 </body>
 </html>
