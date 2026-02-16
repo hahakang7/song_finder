@@ -1,90 +1,344 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <title>Song Finder - Home</title>
-    <style>
-        body { font-family: Arial, sans-serif; }
-        .topnav { margin: 12px 0; }
-        .topnav a { margin-right: 12px; }
-        .container { display: flex; gap: 24px; }
-        .col { width: 50%; border: 1px solid #ddd; padding: 12px; }
-        ul { list-style: none; padding: 0; }
-        li { padding: 8px 0; border-bottom: 1px solid #eee; }
-        small { color: gray; }
-        form { display: inline; }
-        button { margin-left: 6px; }
-        .empty { color: gray; }
-    </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Song Finder</title>
+
+    <!-- Tailwind CDN (개발용) -->
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
 
-<h2>홈</h2>
+<body class="bg-white text-slate-900">
+<!-- Top header -->
+<header class="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur">
+    <div class="mx-auto max-w-6xl px-4">
+        <div class="flex h-16 items-center justify-between">
 
-<div class="topnav">
-    <a href="/playlists">재생목록 관리</a>
-    <a href="/subscriptions">구독목록 관리</a>
-    <a href="/artist/link">아티스트 등록</a>
-</div>
+            <!-- Left: logo + mini menu -->
+            <div class="flex items-center gap-6">
+                <a href="/" class="flex items-center gap-2">
+                    <div class="h-8 w-8 rounded-xl bg-slate-900"></div>
+                    <span class="text-sm font-semibold tracking-tight">Song Finder</span>
+                </a>
 
-<div class="container">
+                <!-- mini menu -->
+                <nav class="hidden md:flex items-center gap-3 text-sm text-slate-600">
+                    <a class="rounded-lg px-3 py-2 hover:bg-slate-100"
+                       th:attr="data-protected=true"
+                       href="/playlists">
+                        재생목록 관리
+                    </a>
+                    <a class="rounded-lg px-3 py-2 hover:bg-slate-100"
+                       th:attr="data-protected=true"
+                       href="/subscriptions">
+                        구독 아티스트 관리
+                    </a>
+                    <a class="rounded-lg px-3 py-2 hover:bg-slate-100"
+                       th:attr="data-protected=true"
+                       href="/artist/link">
+                        아티스트 등록
+                    </a>
+                </nav>
+            </div>
 
-    <!-- 좌측: 구독 아티스트 -->
-    <div class="col">
-        <h3>구독한 아티스트</h3>
+            <!-- Right: auth -->
+            <div class="flex items-center gap-3">
+                <!-- Logged out -->
+                <button th:if="${!isAuthenticated}"
+                        id="openLogin"
+                        class="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800">
+                    로그인
+                </button>
 
-        <div th:if="${#lists.isEmpty(subscribedArtists)}" class="empty">
-            구독한 아티스트가 없습니다.
+                <!-- Logged in -->
+                <div th:if="${isAuthenticated}" class="relative">
+                    <button id="profileBtn"
+                            class="flex items-center gap-2 rounded-xl px-3 py-2 hover:bg-slate-100">
+                        <img th:if="${userAvatarUrl != null}"
+                             th:src="${userAvatarUrl}"
+                             alt="avatar"
+                             class="h-8 w-8 rounded-full border border-slate-200" />
+                        <div th:if="${userAvatarUrl == null}"
+                             class="h-8 w-8 rounded-full bg-slate-200"></div>
+                        <span class="text-sm font-medium" th:text="${userName}">User</span>
+                        <svg class="h-4 w-4 text-slate-500" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd"/>
+                        </svg>
+                    </button>
+
+                    <!-- dropdown -->
+                    <div id="profileMenu"
+                         class="absolute right-0 mt-2 hidden w-48 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+                        <a href="/me"
+                           class="block px-4 py-3 text-sm hover:bg-slate-50">
+                            내정보 (임시)
+                        </a>
+                        <form action="/logout" method="post">
+                            <button type="submit"
+                                    class="block w-full px-4 py-3 text-left text-sm hover:bg-slate-50">
+                                로그아웃 (임시)
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</header>
+
+<!-- Hero -->
+<section class="border-b border-slate-200">
+    <div class="mx-auto max-w-6xl px-4 py-10">
+        <div class="grid gap-8 md:grid-cols-2 md:items-center">
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Subscriptions Dashboard</p>
+                <h1 class="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">
+                    구독 기반으로 빠르게 비교하고,<br class="hidden md:block" />
+                    누락된 곡만 깔끔하게 찾는다
+                </h1>
+                <p class="mt-4 max-w-xl text-sm leading-6 text-slate-600">
+                    아티스트(Topic/채널)와 내 재생목록을 동기화해두면 비교가 빨라진다.
+                    비로그인 상태에서도 홈은 볼 수 있지만, 관리/비교는 로그인 후 가능하다.
+                </p>
+
+                <div class="mt-6 flex flex-wrap gap-3">
+                    <a href="/artist/link"
+                       th:attr="data-protected=true"
+                       class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800">
+                        아티스트 등록
+                    </a>
+                    <a href="/subscriptions"
+                       th:attr="data-protected=true"
+                       class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50">
+                        구독목록 관리
+                    </a>
+                </div>
+            </div>
+
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-6">
+                <div class="grid gap-4">
+                    <div class="rounded-xl bg-white p-4 shadow-sm">
+                        <p class="text-xs font-semibold text-slate-500">TIP</p>
+                        <p class="mt-2 text-sm text-slate-700">
+                            구독을 해두면 다음 비교부터 API 호출량이 줄고 체감 속도가 빨라진다.
+                        </p>
+                    </div>
+                    <div class="rounded-xl bg-white p-4 shadow-sm">
+                        <p class="text-xs font-semibold text-slate-500">FLOW</p>
+                        <p class="mt-2 text-sm text-slate-700">
+                            아티스트 선택 → 재생목록 선택 → 비교 결과(없는 곡/포함된 곡/제외 목록) 확인
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+<!-- Main dashboard -->
+<main class="mx-auto max-w-6xl px-4 py-10">
+    <div class="grid gap-6 lg:grid-cols-2">
+
+        <!-- Left: subscribed artists -->
+        <section class="rounded-2xl border border-slate-200 p-6">
+            <div class="flex items-start justify-between">
+                <div>
+                    <h2 class="text-lg font-semibold tracking-tight">구독한 아티스트</h2>
+                    <p class="mt-1 text-sm text-slate-600">관리 / 비교로 빠르게 이동한다.</p>
+                </div>
+                <a href="/subscriptions"
+                   th:attr="data-protected=true"
+                   class="text-sm font-medium text-slate-900 hover:underline">
+                    관리 페이지 →
+                </a>
+            </div>
+
+            <div th:if="${#lists.isEmpty(subscribedArtists)}"
+                 class="mt-6 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
+                아직 구독한 아티스트가 없다. 아티스트 등록 후 구독을 추가한다.
+            </div>
+
+            <ul class="mt-6 divide-y divide-slate-200"
+                th:if="${!#lists.isEmpty(subscribedArtists)}">
+                <li class="flex items-center justify-between py-4"
+                    th:each="a : ${subscribedArtists}">
+                    <div class="flex items-center gap-3">
+                        <img th:if="${a.thumbnailUrl != null}"
+                             th:src="${a.thumbnailUrl}"
+                             alt="artist"
+                             class="h-10 w-10 rounded-xl border border-slate-200 object-cover" />
+                        <div th:if="${a.thumbnailUrl == null}"
+                             class="h-10 w-10 rounded-xl bg-slate-200"></div>
+
+                        <div>
+                            <div class="text-sm font-semibold" th:text="${a.artistName != null ? a.artistName : a.channelId}">
+                                Artist
+                            </div>
+                            <div class="mt-1 text-xs text-slate-500">
+                <span th:if="${a.lastSyncedAt != null}">
+                  마지막 동기화:
+                  <span th:text="${#temporals.format(a.lastSyncedAt, 'yyyy-MM-dd HH:mm')}"></span>
+                </span>
+                                <span th:if="${a.lastSyncedAt == null}">
+                  아직 동기화 기록이 없다.
+                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <a th:href="@{/artist/{channelId}(channelId=${a.channelId})}"
+                           th:attr="data-protected=true"
+                           class="rounded-xl border border-slate-300 px-3 py-2 text-xs font-medium hover:bg-slate-50">
+                            관리
+                        </a>
+                        <a th:href="@{/compare/select-playlist(channelId=${a.channelId})}"
+                           th:attr="data-protected=true"
+                           class="rounded-xl bg-slate-900 px-3 py-2 text-xs font-medium text-white hover:bg-slate-800">
+                            이 아티스트로 비교
+                        </a>
+                    </div>
+                </li>
+            </ul>
+        </section>
+
+        <!-- Right: subscribed playlists -->
+        <section class="rounded-2xl border border-slate-200 p-6">
+            <div class="flex items-start justify-between">
+                <div>
+                    <h2 class="text-lg font-semibold tracking-tight">구독한 재생목록</h2>
+                    <p class="mt-1 text-sm text-slate-600">상세에서 곡 목록/동기화/재동기화.</p>
+                </div>
+                <a href="/playlists"
+                   th:attr="data-protected=true"
+                   class="text-sm font-medium text-slate-900 hover:underline">
+                    재생목록 관리 →
+                </a>
+            </div>
+
+            <div th:if="${#lists.isEmpty(subscribedPlaylists)}"
+                 class="mt-6 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
+                아직 구독한 재생목록이 없다. 재생목록 관리에서 구독을 추가한다.
+            </div>
+
+            <ul class="mt-6 divide-y divide-slate-200"
+                th:if="${!#lists.isEmpty(subscribedPlaylists)}">
+                <li class="flex items-center justify-between py-4"
+                    th:each="p : ${subscribedPlaylists}">
+                    <div>
+                        <div class="text-sm font-semibold"
+                             th:text="${p.playlistTitle != null ? p.playlistTitle : p.playlistId}">
+                            Playlist
+                        </div>
+                        <div class="mt-1 text-xs text-slate-500">
+              <span th:if="${p.lastSyncedAt != null}">
+                마지막 동기화:
+                <span th:text="${#temporals.format(p.lastSyncedAt, 'yyyy-MM-dd HH:mm')}"></span>
+              </span>
+                            <span th:if="${p.lastSyncedAt == null}">
+                아직 동기화 기록이 없다.
+              </span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <a th:href="@{/playlist/{playlistId}(playlistId=${p.playlistId})}"
+                           th:attr="data-protected=true"
+                           class="rounded-xl border border-slate-300 px-3 py-2 text-xs font-medium hover:bg-slate-50">
+                            상세
+                        </a>
+                    </div>
+                </li>
+            </ul>
+        </section>
+
+    </div>
+</main>
+
+<!-- Login modal -->
+<div id="loginModal" class="fixed inset-0 hidden items-center justify-center bg-slate-900/40 p-4">
+    <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+        <div class="flex items-start justify-between">
+            <div>
+                <h3 class="text-lg font-semibold">로그인</h3>
+                <p class="mt-1 text-sm text-slate-600">관리/비교 기능은 로그인 후 사용할 수 있다.</p>
+            </div>
+            <button id="closeLogin" class="rounded-lg p-2 hover:bg-slate-100" aria-label="close">
+                ✕
+            </button>
         </div>
 
-        <ul>
-            <li th:each="a : ${subscribedArtists}">
-                <b th:text="${a.artistName}">Artist</b>
-                <small th:if="${a.lastSyncedAt != null}">
-                    (마지막:
-                    <span th:text="${#temporals.format(a.lastSyncedAt, 'yyyy-MM-dd HH:mm')}"></span>)
-                </small>
+        <div class="mt-6 space-y-3">
+            <a href="/oauth2/authorization/google"
+               class="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 py-3 text-sm font-medium hover:bg-slate-50">
+                Google로 로그인
+            </a>
 
-                <a th:href="@{/artist/{channelId}(channelId=${a.channelId})}"
-                   style="margin-left:8px;">
-                    관리
-                </a>
-
-                <a th:href="@{/playlists(channelId=${a.channelId})}"
-                   style="margin-left:8px;">
-                    이 아티스트로 비교
-                </a>
-            </li>
-        </ul>
-    </div>
-
-    <!-- 우측: 구독 플레이리스트 -->
-    <div class="col">
-        <h3>구독한 재생목록</h3>
-
-        <div th:if="${#lists.isEmpty(subscribedPlaylists)}" class="empty">
-            구독한 재생목록이 없습니다.
+            <a href="/signup"
+               class="flex w-full items-center justify-center rounded-xl bg-slate-900 px-4 py-3 text-sm font-medium text-white hover:bg-slate-800">
+                회원가입 (임시)
+            </a>
         </div>
 
-        <ul>
-            <li th:each="p : ${subscribedPlaylists}">
-                <b th:text="${p.playlistTitle}">Playlist</b>
-                <small th:if="${p.lastSyncedAt != null}">
-                    (마지막:
-                    <span th:text="${#temporals.format(p.lastSyncedAt, 'yyyy-MM-dd HH:mm')}"></span>)
-                </small>
-
-                <a th:href="@{/playlist/{id}(id=${p.playlistId})}"
-                   style="margin-left:8px;">
-                    보기
-                </a>
-
-                <!-- 비교는 아티스트가 필요하니 여기선 링크만 두거나, subscriptions에서 조합 -->
-            </li>
-        </ul>
+        <p class="mt-4 text-xs text-slate-500">
+            내정보/로그아웃은 현재 임시로만 제공한다.
+        </p>
     </div>
-
 </div>
 
+<script>
+    // auth flags from server (thymeleaf)
+    const isAuthenticated = /*[[${isAuthenticated}]]*/ false;
+
+    // profile dropdown
+    const profileBtn = document.getElementById('profileBtn');
+    const profileMenu = document.getElementById('profileMenu');
+
+    if (profileBtn && profileMenu) {
+        profileBtn.addEventListener('click', () => {
+            profileMenu.classList.toggle('hidden');
+        });
+        document.addEventListener('click', (e) => {
+            if (!profileBtn.contains(e.target) && !profileMenu.contains(e.target)) {
+                profileMenu.classList.add('hidden');
+            }
+        });
+    }
+
+    // login modal
+    const modal = document.getElementById('loginModal');
+    const openLogin = document.getElementById('openLogin');
+    const closeLogin = document.getElementById('closeLogin');
+
+    function openModal() {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+    function closeModal() {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+
+    if (openLogin) openLogin.addEventListener('click', openModal);
+    if (closeLogin) closeLogin.addEventListener('click', closeModal);
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+    }
+
+    // protected links: if not authenticated, open modal instead
+    document.querySelectorAll('[data-protected="true"]').forEach((el) => {
+        el.addEventListener('click', (e) => {
+            if (!isAuthenticated) {
+                e.preventDefault();
+                openModal();
+            }
+        });
+    });
+</script>
 </body>
 </html>
