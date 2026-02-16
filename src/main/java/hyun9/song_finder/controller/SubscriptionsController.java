@@ -52,10 +52,7 @@ public class SubscriptionsController {
         List<SubscribedArtist> artists = subscribedArtistRepository.findByUserId(userId);
         List<SubscribedPlaylist> playlists = subscribedPlaylistRepository.findByUserId(userId);
 
-        model.addAttribute("subscribedArtists", artists);
-        model.addAttribute("subscribedPlaylists", playlists);
-
-        model.addAttribute("subscribedArtists", result.getContent());
+        model.addAttribute("artists", artists);
         model.addAttribute("page", page);
         model.addAttribute("size", size);
         model.addAttribute("hasPrev", result.hasPrevious());

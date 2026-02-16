@@ -1,62 +1,215 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <title>채널 등록</title>
-    <style>
-        body { font-family: Arial, sans-serif; }
-        .card { padding: 12px; border: 1px solid #ddd; margin: 12px 0; }
-        img { vertical-align: middle; margin-right: 8px; }
-        form { display: inline; }
-        button { margin-left: 6px; }
-        small { color: gray; }
-    </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>아티스트 확인</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
 
-<h2>아티스트 등록 완료</h2>
+<body class="bg-white text-slate-900">
+<!-- Header -->
+<header class="border-b border-slate-200 bg-white">
+    <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
+        <div class="flex items-center gap-3">
+            <a href="/" class="flex items-center gap-2">
+                <div class="h-7 w-7 rounded-xl bg-slate-900"></div>
+                <span class="text-sm font-semibold tracking-tight">Song Finder</span>
+            </a>
+            <span class="hidden sm:inline text-sm text-slate-500">아티스트 등록</span>
+        </div>
 
-<div class="card">
-    <div>
-        <!-- channelInfo.snippet.thumbnails.default.url -->
-        <img th:if="${artistThumbnailUrl != null}"
-             th:src="${artistThumbnailUrl}"
-             alt="thumb">
+        <div class="flex items-center gap-3">
+            <a href="/playlists"
+               class="rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50">
+                재생목록 관리
+            </a>
+            <a href="/artist-subscribed"
+               class="rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50">
+                구독 아티스트 관리
+            </a>
+            <a href="/artist/link"
+               class="rounded-xl bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800">
+                다른 아티스트 등록
+            </a>
+        </div>
+    </div>
+</header>
 
+<main class="mx-auto max-w-6xl px-4 py-10">
+    <a href="/artist/link" class="text-sm font-medium text-slate-700 hover:underline">← 아티스트 URL 다시 입력</a>
 
-        <b th:text="${artistName != null ? artistName : '알 수 없는 아티스트'}">Artist</b>
-        <small th:text="'(channelId: ' + ${channelId} + ')'">(channelId)</small>
+    <!-- Title -->
+    <div class="mt-4">
+        <h1 class="text-2xl font-semibold tracking-tight">아티스트 확인</h1>
+        <p class="mt-2 text-sm text-slate-600">
+            채널 정보를 확인한 다음, 비교할 재생목록을 선택한다.
+        </p>
     </div>
 
-    <div style="margin-top: 8px;">
-        <!-- ✅ 선택지 1 핵심: 관리 페이지로 이동 -->
-        <a th:href="@{/artist/{channelId}(channelId=${channelId})}">
-            아티스트 관리(구독/재동기화/해지)로 이동
+    <!-- Channel Card -->
+    <section class="mt-8 rounded-2xl border border-slate-200 p-6">
+        <div class="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+            <!-- Left -->
+            <div class="flex items-start gap-4">
+                <!-- Channel avatar -->
+                <img
+                        th:if="${channelInfo != null and channelInfo.snippet != null and channelInfo.snippet.thumbnails != null and channelInfo.snippet.thumbnails.default != null}"
+                        th:src="${channelInfo.snippet.thumbnails.default.url}"
+                        alt="channel"
+                        class="h-14 w-14 rounded-2xl border border-slate-200 object-cover"
+                />
+                <div
+                        th:if="${channelInfo == null or channelInfo.snippet == null or channelInfo.snippet.thumbnails == null or channelInfo.snippet.thumbnails.default == null}"
+                        class="h-14 w-14 rounded-2xl bg-slate-200"
+                ></div>
+
+                <div class="min-w-0">
+                    <div class="text-lg font-semibold tracking-tight"
+                         th:text="${artistName != null ? artistName : '채널'}">
+                        Artist
+                    </div>
+
+                    <div class="mt-1 text-sm text-slate-600">
+                        <span class="font-medium">channelId:</span>
+                        <span th:text="${channelId}">UCxxxx</span>
+                    </div>
+
+                    <div class="mt-2 text-xs text-slate-500"
+                         th:if="${channelInfo != null and channelInfo.snippet != null and channelInfo.snippet.description != null}">
+                        <span th:text="${#strings.abbreviate(channelInfo.snippet.description, 120)}"></span>
+                    </div>
+
+                    <div class="mt-2 text-xs text-slate-500">
+                        <a th:if="${channelInfo != null and channelInfo.snippet != null and channelInfo.snippet.customUrl != null}"
+                           th:href="'https://www.youtube.com/' + ${channelInfo.snippet.customUrl}"
+                           class="hover:underline"
+                           target="_blank" rel="noreferrer">
+                            유튜브에서 보기 →
+                        </a>
+                        <a th:if="${channelInfo == null or channelInfo.snippet == null or channelInfo.snippet.customUrl == null}"
+                           th:href="'https://www.youtube.com/channel/' + ${channelId}"
+                           class="hover:underline"
+                           target="_blank" rel="noreferrer">
+                            유튜브에서 보기 →
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: subscription status/actions (optional) -->
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 md:w-[320px]">
+                <p class="text-xs font-semibold text-slate-500">구독 상태</p>
+
+                <div class="mt-2 text-sm">
+                    <span th:if="${artistSubscribed == true}" class="font-semibold text-slate-900">✅ 구독됨</span>
+                    <span th:if="${artistSubscribed != true}" class="font-semibold text-slate-700">구독되지 않음</span>
+                </div>
+
+                <div class="mt-2 text-xs text-slate-600" th:if="${artistLastSyncedAt != null}">
+                    마지막 동기화:
+                    <span th:text="${#temporals.format(artistLastSyncedAt, 'yyyy-MM-dd HH:mm')}"></span>
+                </div>
+
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <form th:if="${artistSubscribed != true}" th:action="@{/subscribe/artist/toggle}" method="post">
+                        <input type="hidden" name="channelId" th:value="${channelId}" />
+                        <input type="hidden" name="artistName" th:value="${artistName}" />
+                        <input type="hidden" name="artistThumbnailUrl" th:value="${artistThumbnailUrl}" />
+
+                        <button type="submit"
+                                class="rounded-xl bg-slate-900 px-3 py-2 text-xs font-medium text-white hover:bg-slate-800">
+                            구독
+                        </button>
+                    </form>
+
+                    <form th:if="${artistSubscribed == true}" th:action="@{/subscribe/artist/toggle}" method="post">
+                        <input type="hidden" name="channelId" th:value="${channelId}" />
+                        <input type="hidden" name="artistName" th:value="${artistName}" />
+                        <input type="hidden" name="artistThumbnailUrl" th:value="${artistThumbnailUrl}" />
+
+                        <button type="submit"
+                                class="rounded-xl border border-slate-300 px-3 py-2 text-xs font-medium hover:bg-slate-50">
+                            구독 해지
+                        </button>
+                    </form>
+
+                    <form th:if="${artistSubscribed == true}" th:action="@{/subscribe/artist/resync}" method="post">
+                        <input type="hidden" name="channelId" th:value="${channelId}" />
+                        <input type="hidden" name="artistName" th:value="${artistName}" />
+                        <input type="hidden" name="artistThumbnailUrl" th:value="${artistThumbnailUrl}" />
+                        <button type="submit"
+                                class="rounded-xl border border-slate-300 px-3 py-2 text-xs font-medium hover:bg-slate-50">
+                            재동기화
+                        </button>
+                    </form>
+                </div>
+
+                <p class="mt-3 text-xs text-slate-500">
+                    구독하면 다음 비교부터 DB 기반(빠름)으로 진행될 수 있다.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Compare: select playlist -->
+    <section class="mt-8 rounded-2xl border border-slate-200 p-6">
+        <div class="flex items-start justify-between">
+            <div>
+                <h2 class="text-lg font-semibold tracking-tight">재생목록 선택 후 비교</h2>
+                <p class="mt-1 text-sm text-slate-600">
+                    내 재생목록 중 하나를 선택하면 바로 비교를 시작한다.
+                </p>
+            </div>
+            <a href="/playlists" class="text-sm font-medium text-slate-900 hover:underline">
+                재생목록 관리 →
+            </a>
+        </div>
+
+        <div th:if="${#lists.isEmpty(playlists)}"
+             class="mt-6 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
+            가져온 재생목록이 없다. 로그인/권한 상태를 확인한다.
+        </div>
+
+        <form th:if="${!#lists.isEmpty(playlists)}"
+              th:action="@{/compare}" method="get"
+              class="mt-6 grid gap-4 sm:grid-cols-3 sm:items-end">
+
+            <input type="hidden" name="channelId" th:value="${channelId}" />
+
+            <div class="sm:col-span-2">
+                <label class="text-sm font-medium">비교할 재생목록</label>
+                <select name="playlistId" required
+                        class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-3 text-sm">
+                    <option value="" disabled selected>재생목록 선택</option>
+                    <option th:each="pl : ${playlists}"
+                            th:value="${pl.id}"
+                            th:text="${pl.snippet.title}">
+                    </option>
+                </select>
+                <p class="mt-2 text-xs text-slate-500">
+                    비교 결과 화면에서 “제외(Dump)” 및 “구독/재동기화”를 수행할 수 있다.
+                </p>
+            </div>
+
+            <div class="sm:col-span-1">
+                <button type="submit"
+                        class="w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-medium text-white hover:bg-slate-800">
+                    비교 시작
+                </button>
+            </div>
+        </form>
+    </section>
+
+    <!-- Footer links -->
+    <div class="mt-10 flex flex-wrap gap-3">
+        <a href="/" class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50">
+            홈으로
+        </a>
+        <a href="/artistlists" class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50">
+            구독 아티스트 관리
         </a>
     </div>
-</div>
-
-<hr>
-
-<h3>비교할 플레이리스트 선택</h3>
-
-<form th:action="@{/compare}" method="get">
-    <input type="hidden" name="channelId" th:value="${channelId}">
-
-    <select name="playlistId" required>
-        <option value="" disabled selected>플레이리스트 선택</option>
-        <option th:each="pl : ${playlists}"
-                th:value="${pl.id}"
-                th:text="${pl.snippet.title}">
-        </option>
-    </select>
-
-    <button type="submit">비교하기</button>
-</form>
-
-<hr>
-
-<a href="/playlists">플레이리스트 목록으로 돌아가기</a>
-
+</main>
 </body>
 </html>

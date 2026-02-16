@@ -41,6 +41,8 @@
         <form th:action="@{/subscribe/artist/toggle}" method="post">
             <input type="hidden" name="channelId" th:value="${channelId}">
             <input type="hidden" name="artistName" th:value="${artistName}">
+            <input type="hidden" name="artistThumbnailUrl" th:value="${artistThumbnailUrl}">
+
             <button type="submit"
                     th:text="${artistSubscribed} ? '구독 해지' : '구독'">
                 구독
@@ -52,6 +54,8 @@
               th:action="@{/subscribe/artist/resync}" method="post">
             <input type="hidden" name="channelId" th:value="${channelId}">
             <input type="hidden" name="artistName" th:value="${artistName}">
+            <input type="hidden" name="artistThumbnailUrl" th:value="${artistThumbnailUrl}">
+
             <button type="submit">재동기화</button>
         </form>
     </div>

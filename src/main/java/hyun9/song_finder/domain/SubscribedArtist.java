@@ -38,13 +38,21 @@ public class SubscribedArtist {
     @Column(name = "last_synced_at", nullable = false)
     private LocalDateTime lastSyncedAt;
 
+    @Column(name = "thumbnail_url", length = 500)
+    private String thumbnailUrl;
+
     protected SubscribedArtist() {}
 
-    public SubscribedArtist(String userId, String channelId, String artistName) {
+    public SubscribedArtist(String userId, String channelId, String artistName, String thumbnailUrl) {
         this.userId = userId;
         this.channelId = channelId;
         this.artistName = artistName;
         this.lastSyncedAt = LocalDateTime.now();
+        this.thumbnailUrl = thumbnailUrl;
+    }
+
+    public void updateThumbnailUrl(String thumbnailUrl) {
+        this.thumbnailUrl = thumbnailUrl;
     }
 
     public void markSynced() {

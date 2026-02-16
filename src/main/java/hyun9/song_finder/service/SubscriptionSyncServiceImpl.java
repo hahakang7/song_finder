@@ -129,7 +129,8 @@ public class SubscriptionSyncServiceImpl implements SubscriptionSyncService {
             String userId,
             String accessToken,
             String channelId,
-            String artistName
+            String artistName,
+            String thumbnailUrl
     ) {
 
         if (artistName == null || artistName.isBlank()) {
@@ -153,7 +154,8 @@ public class SubscriptionSyncServiceImpl implements SubscriptionSyncService {
                                         new SubscribedArtist(
                                                 userId,
                                                 channelId,
-                                                finalArtistName
+                                                finalArtistName,
+                                                thumbnailUrl
                                         )
                                 )
                         );
@@ -200,9 +202,6 @@ public class SubscriptionSyncServiceImpl implements SubscriptionSyncService {
             String normalized =
                     youtubeService.normalizeSongTitle(rawTitle, artistName);
             if (normalized.isBlank()) continue;
-
-            String thumbnailUrl =
-                    youtubeService.extractDefaultThumbnailUrl(snippet);
 
             // 동일 곡 중복 방지
             titleToThumb.putIfAbsent(normalized, thumbnailUrl);

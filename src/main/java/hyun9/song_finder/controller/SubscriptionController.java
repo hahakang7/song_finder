@@ -1,6 +1,5 @@
 package hyun9.song_finder.controller;
 
-import hyun9.song_finder.repository.ArtistSongRepository;
 import hyun9.song_finder.repository.SubscribedArtistRepository;
 import hyun9.song_finder.repository.SubscribedPlaylistRepository;
 import hyun9.song_finder.service.SubscriptionSyncService;
@@ -22,7 +21,6 @@ public class SubscriptionController {
     private final SubscriptionSyncService subscriptionSyncService;
     private final SubscribedPlaylistRepository subscribedPlaylistRepository;
     private final SubscribedArtistRepository subscribedArtistRepository;
-    private final ArtistSongRepository artistSongRepository;
     private final OAuth2AuthorizedClientService clientService;
 
     @PostMapping("/artist")
@@ -30,7 +28,8 @@ public class SubscriptionController {
             @AuthenticationPrincipal OAuth2User principal,
             @RequestParam("channelId") String channelId,
             @RequestParam("artistName") String artistName,
-            @RequestParam("playlistId") String playlistId
+            @RequestParam("playlistId") String playlistId,
+            @RequestParam("artistThumbnailUrl") String artistThumbnailUrl
     ) {
 
         OAuth2AuthorizedClient client =
@@ -41,19 +40,22 @@ public class SubscriptionController {
                 principal.getName(),
                 accessToken,
                 channelId,
-                artistName
+                artistName,
+                artistThumbnailUrl
         );
 
         return "redirect:/compare?channelId="
                 + channelId + "&playlistId=" + playlistId;
     }
 
-    //아티스트 구독이 되어있으면 구독 해지하는 메서드
+    //아티스트 구독이 되어있으면 구독 해지 아니라면 구독하는 메서드
     @PostMapping("/artist/toggle")
     public String toggleArtist(
             @AuthenticationPrincipal OAuth2User principal,
             @RequestParam("channelId") String channelId,
-            @RequestParam("artistName") String artistName
+            @RequestParam("artistName") String artistName,
+            @RequestParam("artistThumbnailUrl") String artistThumbnailUrl
+
     ) {
         String userId = principal.getName();
 
@@ -72,28 +74,13 @@ public class SubscriptionController {
         String accessToken = client.getAccessToken().getTokenValue();
 
         subscriptionSyncService.subscribeAndSyncArtist(
-                userId, accessToken, channelId, artistName
+                userId, accessToken, channelId, artistName, artistThumbnailUrl
         );
 
         return "redirect:/artist/" + channelId;
     }
 
-    @PostMapping("/artist/resync")
-    public String resyncArtist(
-            @AuthenticationPrincipal OAuth2User principal,
-            @RequestParam("channelId") String channelId,
-            @RequestParam("artistName") String artistName
-    ) {
-        OAuth2AuthorizedClient client =
-                clientService.loadAuthorizedClient("google", principal.getName());
-        String accessToken = client.getAccessToken().getTokenValue();
 
-        subscriptionSyncService.subscribeAndSyncArtist(
-                principal.getName(), accessToken, channelId, artistName
-        );
-
-        return "redirect:/artist/" + channelId;
-    }
 
 
 
@@ -151,26 +138,22 @@ public class SubscriptionController {
 
 
     //artist 재동기화
-    @PostMapping("/resync/artist")
+    @PostMapping("/artist/resync")
     public String resyncArtist(
             @AuthenticationPrincipal OAuth2User principal,
             @RequestParam("channelId") String channelId,
-            @RequestParam("playlistId") String playlistId,
-            @RequestParam("artistName") String artistName
+            @RequestParam("artistName") String artistName,
+            @RequestParam("artistThumbnailUrl") String artistThumbnailUrl
     ) {
-
         OAuth2AuthorizedClient client =
                 clientService.loadAuthorizedClient("google", principal.getName());
         String accessToken = client.getAccessToken().getTokenValue();
 
         subscriptionSyncService.subscribeAndSyncArtist(
-                principal.getName(),
-                accessToken,
-                channelId,
-                artistName
+                principal.getName(), accessToken, channelId, artistName, artistThumbnailUrl
         );
 
-        return "redirect:/compare?channelId=" + channelId + "&playlistId=" + playlistId;
+        return "redirect:/artist/" + channelId;
     }
 
     //playlist 재동기화
